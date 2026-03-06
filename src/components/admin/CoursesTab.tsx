@@ -1,0 +1,148 @@
+import { useState, useMemo } from 'react';
+import { useCourseStore } from '@/store/courseStore';
+import { useAuthStore } from '@/store/authStore';
+import { useSettingsStore } from '@/store/settingsStore';
+import { getDayNumber } from '@/utils/courseUtils';
+import { Button } from '@/components/common/Button';
+import { AdminCourseModal } from './AdminCourseModal';
+import type { Course } from '@/types/course';
+import { Plus, Pencil, Trash2, Wifi, MapPin, Users } from 'lucide-react';
+
+export function CoursesTab() {
+  const courses = useCourseStore(s => s.courses);
+  const deleteCourse = useCourseStore(s => s.deleteCourse);
+  const getAllUsers = useAuthStore(s => s.getAllUsers);
+  const getTeacherColor = useSettingsStore(s => s.getTeacherColor);
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [editing, setEditing] = useState<Course | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [filterTeacher, setFilterTeacher] = useState('');
+
+  const allUsers = getAllUsers();
+
+  const filtered = useMemo(() => {
+    const base = [...courses].sort((a, b) =>
+      a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime)
+    );
+    if (!filterTeacher) return base;
+    return base.filter(c =>
+      c.teacher === filterTeacher || (c.coTeachers ?? []).includes(filterTeacher)
+    );
+  }, [courses, filterTeacher]);
+
+  function getDisplayName(username: string) {
+    return allUsers.find(u => u.username === username)?.displayName ?? username;
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 flex-wrap justify-between">
+        <div className="flex items-center gap-2">
+          <select
+            value={filterTeacher}
+            onChange={e => setFilterTeacher(e.target.value)}
+            className="border border-[#e2e8f0] rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#1e3a5f]/40"
+          >
+            <option value="">全部教师</option>
+            {allUsers.map(u => (
+              <option key={u.username} value={u.username}>{u.displayName}</option>
+            ))}
+          </select>
+          <span className="text-xs text-[#64748b]">共 {filtered.length} 节课</span>
+        </div>
+        <Button size="sm" onClick={() => setShowAdd(true)}>
+          <Plus className="w-4 h-4 inline mr-1" />新增课程
+        </Button>
+      </div>
+
+      {/* Course list */}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center py-12 text-center">
+          <p className="text-[#64748b] text-sm">暂无课程数据</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {filtered.map(course => {
+            const color = getTeacherColor(course.teacher);
+            const dayNum = getDayNumber(course.id, courses);
+            const coTeachers = course.coTeachers ?? [];
+            const isOnline = (course.mode ?? 'offline') === 'online';
+
+            return (
+              <div key={course.id} className="bg-white rounded-xl border border-[#e2e8f0] flex items-stretch overflow-hidden">
+                {/* Color strip */}
+                <div className="w-1 shrink-0" style={{ backgroundColor: color }} />
+
+                <div className="flex-1 px-4 py-3 flex items-center gap-4 min-w-0">
+                  {/* Day badge */}
+                  <div className="shrink-0 text-center">
+                    <div className="text-[10px] text-[#64748b]">Day</div>
+                    <div className="text-lg font-bold text-[#1e3a5f] leading-tight">{dayNum}</div>
+                  </div>
+
+                  <div className="h-8 w-px bg-[#e2e8f0] shrink-0" />
+
+                  {/* Course info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-[#0f172a] text-sm truncate">{course.teamName}</span>
+                      <span className="text-xs text-[#64748b] bg-[#f1f5f9] px-2 py-0.5 rounded-full shrink-0">{course.courseName}</span>
+                      {isOnline
+                        ? <span className="flex items-center gap-0.5 text-[10px] bg-[#f59e0b] text-white px-1.5 py-0.5 rounded-full shrink-0"><Wifi className="w-2.5 h-2.5" />线上</span>
+                        : <span className="flex items-center gap-0.5 text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded-full shrink-0"><MapPin className="w-2.5 h-2.5" />线下</span>
+                      }
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-[#64748b] flex-wrap">
+                      <span>{course.date} · {course.startTime}–{course.endTime}</span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: color }} />
+                        {getDisplayName(course.teacher)}
+                        {coTeachers.length > 0 && (
+                          <span className="flex items-center gap-0.5 text-[#94a3b8]">
+                            <Users className="w-3 h-3" />
+                            {coTeachers.map(u => getDisplayName(u)).join('、')}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 px-3 shrink-0">
+                  <button onClick={() => setEditing(course)}
+                    className="p-1.5 rounded-lg text-[#64748b] hover:text-[#1e3a5f] hover:bg-[#f1f5f9] transition-colors">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setConfirmDelete(course.id)}
+                    className="p-1.5 rounded-lg text-[#64748b] hover:text-red-500 hover:bg-red-50 transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Delete confirm */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm flex flex-col gap-4">
+            <p className="font-semibold text-[#0f172a]">确认删除此课程？</p>
+            <p className="text-sm text-[#64748b]">此操作无法撤销。</p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="secondary" onClick={() => setConfirmDelete(null)}>取消</Button>
+              <Button variant="danger" onClick={() => { deleteCourse(confirmDelete); setConfirmDelete(null); }}>删除</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAdd && <AdminCourseModal onClose={() => setShowAdd(false)} />}
+      {editing && <AdminCourseModal course={editing} onClose={() => setEditing(null)} />}
+    </div>
+  );
+}
