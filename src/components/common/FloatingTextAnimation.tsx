@@ -20,12 +20,11 @@ const WORDS = [
   'Quant Strategy','Business IQ','Financial Growth','Smart Education','Future Talent',
 ];
 
-// Size tiers: 50% small, 33% medium, 17% large
 function pickFontSize(): number {
   const r = Math.random();
-  if (r < 0.50) return 11 + Math.random() * 5;   // small:  11–16
-  if (r < 0.83) return 20 + Math.random() * 8;   // medium: 20–28
-  return 32 + Math.random() * 12;                 // large:  32–44
+  if (r < 0.50) return 11 + Math.random() * 5;
+  if (r < 0.83) return 20 + Math.random() * 8;
+  return 32 + Math.random() * 12;
 }
 
 interface Particle {
@@ -33,10 +32,12 @@ interface Particle {
   y: number;
   text: string;
   baseFontSize: number;
-  scale: number;    // lerps to 1.9 on hover, 1.0 otherwise
+  scale: number;
   opacity: number;
-  speed: number;    // px/frame, horizontal only
-  r: number; g: number; b: number;
+  speed: number;
+  r: number;
+  g: number;
+  b: number;
 }
 
 function makeParticle(w: number, h: number, scatter = false): Particle {
@@ -46,7 +47,6 @@ function makeParticle(w: number, h: number, scatter = false): Particle {
   const roll = Math.random();
   const [r, g, b] = roll < 0.45 ? [230, 242, 255] : roll < 0.75 ? [147, 197, 253] : [200, 228, 255];
 
-  // Use multiple vertical bands to ensure even spread, then add jitter
   const band = Math.floor(Math.random() * 8);
   const bandH = Math.max(1, h - baseFontSize * 2);
   const yBase = (band / 8) * bandH;
@@ -61,7 +61,9 @@ function makeParticle(w: number, h: number, scatter = false): Particle {
     scale: 1,
     opacity,
     speed,
-    r, g, b,
+    r,
+    g,
+    b,
   };
 }
 
@@ -71,46 +73,52 @@ export function FloatingTextAnimation({ className = '' }: { className?: string }
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d')!;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    let animId: number;
+    let animId: number | null = null;
     let particles: Particle[] = [];
-    let cssW = 0, cssH = 0;
+    let cssW = 0;
+    let cssH = 0;
     const mouse = { x: -9999, y: -9999 };
 
-    // Mouse tracking
-    function onMove(e: MouseEvent) {
+    const onMove = (e: MouseEvent) => {
+      if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
       mouse.x = e.clientX - rect.left;
       mouse.y = e.clientY - rect.top;
-    }
-    function onLeave() { mouse.x = -9999; mouse.y = -9999; }
+    };
+
+    const onLeave = () => {
+      mouse.x = -9999;
+      mouse.y = -9999;
+    };
+
     canvas.addEventListener('mousemove', onMove);
     canvas.addEventListener('mouseleave', onLeave);
 
-    function resize() {
+    const resize = () => {
+      if (!canvas) return;
       cssW = canvas.offsetWidth;
       cssH = canvas.offsetHeight;
       canvas.width = cssW * dpr;
       canvas.height = cssH * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
+    };
 
-    function init() {
+    const init = () => {
       resize();
       particles = Array.from({ length: 50 }, () => makeParticle(cssW, cssH, true));
-    }
+    };
 
-    function draw() {
-      // Reset shadow before clear to avoid bleed
+    const draw = () => {
       ctx.shadowBlur = 0;
       ctx.clearRect(0, 0, cssW, cssH);
 
-      // Subtle star dots
       ctx.fillStyle = 'rgba(160,200,255,0.12)';
       for (let i = 0; i < 80; i++) {
-        // stable stars: use index as seed via modulo trick (pre-computed in init is better, but this is lightweight)
         const sx = (i * 137.5) % cssW;
         const sy = (i * 97.3) % cssH;
         ctx.beginPath();
@@ -123,17 +131,14 @@ export function FloatingTextAnimation({ className = '' }: { className?: string }
         ctx.font = baseFont;
         const baseTW = ctx.measureText(p.text).width;
 
-        // Hit detection using base dimensions
         const hovered =
           mouse.x >= p.x &&
           mouse.x <= p.x + baseTW &&
           mouse.y >= p.y - p.baseFontSize &&
           mouse.y <= p.y + p.baseFontSize * 0.25;
 
-        // Smooth scale lerp
         p.scale += ((hovered ? 1.9 : 1.0) - p.scale) * 0.14;
 
-        // Render at scaled size, anchored at same baseline
         const scaledFS = p.baseFontSize * p.scale;
         ctx.font = `500 ${scaledFS}px -apple-system,"PingFang SC","Microsoft YaHei",sans-serif`;
         ctx.shadowBlur = 0;
@@ -142,17 +147,15 @@ export function FloatingTextAnimation({ className = '' }: { className?: string }
         ctx.fillText(p.text, p.x, p.y);
         ctx.globalAlpha = 1;
 
-        // Move left only (no vertical drift)
         p.x -= p.speed;
 
-        // Recycle when off left edge
         if (p.x + baseTW < -10) {
           Object.assign(p, makeParticle(cssW, cssH, false));
         }
       }
 
       animId = requestAnimationFrame(draw);
-    }
+    };
 
     init();
     animId = requestAnimationFrame(draw);
@@ -161,7 +164,7 @@ export function FloatingTextAnimation({ className = '' }: { className?: string }
     ro.observe(canvas);
 
     return () => {
-      cancelAnimationFrame(animId);
+      if (animId) cancelAnimationFrame(animId);
       ro.disconnect();
       canvas.removeEventListener('mousemove', onMove);
       canvas.removeEventListener('mouseleave', onLeave);
