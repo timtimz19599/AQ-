@@ -50,7 +50,7 @@ export function LoginPage() {
           {/* Logo card */}
           <div className="rounded-2xl px-6 py-4 shadow-2xl"
             style={{ background: 'rgba(255,255,255,0.95)', boxShadow: '0 0 40px rgba(96,165,250,0.25), 0 8px 32px rgba(0,0,0,0.5)' }}>
-            <img src="/logo.png" alt="Alpha Quants" className="h-20 object-contain" />
+            <img src="/logo.png" alt="Alpha Quants" className="h-28 object-contain" />
           </div>
 
           {/* Gradient tagline */}

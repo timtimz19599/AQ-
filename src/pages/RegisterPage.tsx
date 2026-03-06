@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/common/Button';
+import { FloatingTextAnimation } from '@/components/common/FloatingTextAnimation';
 
 export function RegisterPage() {
   const navigate = useNavigate();
@@ -37,16 +38,56 @@ export function RegisterPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left decorative panel */}
-      <div className="hidden md:flex md:w-2/5 bg-[#1e3a5f] dot-grid flex-col items-center justify-center p-10 relative overflow-hidden">
-        <div className="absolute top-[-60px] left-[-60px] w-64 h-64 rounded-full bg-white/5 blur-2xl" />
-        <div className="absolute bottom-[-60px] right-[-60px] w-80 h-80 rounded-full bg-[#f59e0b]/10 blur-3xl" />
-        <div className="bg-white/95 rounded-2xl px-6 py-4 mb-6 relative z-10 shadow-lg">
-          <img src="/logo.png" alt="Alpha Quants" className="h-20 object-contain" />
+      {/* Left panel — deep space tech */}
+      <div className="hidden md:flex md:w-2/5 flex-col items-center justify-center p-10 relative overflow-hidden"
+        style={{ background: 'linear-gradient(160deg, #020817 0%, #060d1f 40%, #091428 70%, #0a1833 100%)' }}>
+
+        {/* Canvas animation */}
+        <FloatingTextAnimation />
+
+        {/* Edge vignette */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse at 80% 50%, transparent 40%, #020817 100%)' }} />
+        <div className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+          style={{ background: 'linear-gradient(to top, #020817, transparent)' }} />
+        <div className="absolute top-0 left-0 right-0 h-16 pointer-events-none"
+          style={{ background: 'linear-gradient(to bottom, #020817, transparent)' }} />
+
+        {/* Center glow spot */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(30,80,160,0.18) 0%, transparent 70%)' }} />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center gap-6">
+          {/* Logo card */}
+          <div className="rounded-2xl px-6 py-4 shadow-2xl"
+            style={{ background: 'rgba(255,255,255,0.95)', boxShadow: '0 0 40px rgba(96,165,250,0.25), 0 8px 32px rgba(0,0,0,0.5)' }}>
+            <img src="/logo.png" alt="Alpha Quants" className="h-28 object-contain" />
+          </div>
+
+          {/* Gradient tagline */}
+          <div className="text-center">
+            <h2 className="text-2xl font-bold tracking-wide"
+              style={{
+                background: 'linear-gradient(90deg, #93c5fd 0%, #e2e8f0 50%, #93c5fd 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>
+              加入 AQ 团队
+            </h2>
+            <p className="mt-2 text-sm" style={{ color: 'rgba(147,197,253,0.6)' }}>
+              创建您的教师账号
+            </p>
+          </div>
+
+          {/* Gold + blue accent lines */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-px" style={{ background: 'rgba(147,197,253,0.4)' }} />
+            <div className="w-12 h-0.5 rounded-full bg-[#f59e0b]" />
+            <div className="w-8 h-px" style={{ background: 'rgba(147,197,253,0.4)' }} />
+          </div>
         </div>
-        <h2 className="text-white text-2xl font-bold text-center relative z-10">加入 AQ 团队</h2>
-        <p className="text-white/60 text-sm mt-2 text-center relative z-10">创建您的教师账号</p>
-        <div className="mt-8 w-16 h-1 bg-[#f59e0b] rounded-full relative z-10" />
       </div>
 
       {/* Right form panel */}

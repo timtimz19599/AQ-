@@ -1,4 +1,5 @@
 export type UserRole = 'teacher' | 'admin';
+export type TeacherType = 'lead' | 'assistant';
 
 export interface User {
   id: string;
@@ -6,6 +7,8 @@ export interface User {
   displayName: string;
   passwordHash: string;
   role: UserRole;
+  teacherType: TeacherType;
+  approved: boolean;
   createdAt: number;
 }
 
@@ -14,4 +17,5 @@ export interface AuthSession {
   username: string;
   displayName: string;
   role: UserRole;
+  approved: boolean;
 }

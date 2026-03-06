@@ -6,7 +6,8 @@ import { getDaysInMonth, formatDate } from '@/utils/timeUtils';
 
 // Returns a 2D array: weeks × 7 days, null for days outside the month
 // If filterUsername is provided, only includes courses where that user is teacher or co-teacher
-export function useMonthGrid(year: number, month: number, filterUsername?: string): (DaySchedule | null)[][] {
+// If approvedUsernames is provided (admin view), only includes courses from those users
+export function useMonthGrid(year: number, month: number, filterUsername?: string, approvedUsernames?: string[]): (DaySchedule | null)[][] {
   const getCoursesByMonth = useCourseStore(s => s.getCoursesByMonth);
   const courses = useCourseStore(s => s.courses);
 
@@ -16,6 +17,8 @@ export function useMonthGrid(year: number, month: number, filterUsername?: strin
       monthCourses = monthCourses.filter(c =>
         c.teacher === filterUsername || (c.coTeachers ?? []).includes(filterUsername)
       );
+    } else if (approvedUsernames) {
+      monthCourses = monthCourses.filter(c => approvedUsernames.includes(c.teacher));
     }
     const daysInMonth = getDaysInMonth(year, month);
     const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
@@ -40,5 +43,5 @@ export function useMonthGrid(year: number, month: number, filterUsername?: strin
     }
     return weeks;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [year, month, courses, filterUsername]);
+  }, [year, month, courses, filterUsername, approvedUsernames]);
 }

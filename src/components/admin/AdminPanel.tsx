@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { StatisticsTab } from './StatisticsTab';
 import { SettingsTab } from './SettingsTab';
 import { CoursesTab } from './CoursesTab';
+import { TeachersTab } from './TeachersTab';
 
-type Tab = 'courses' | 'statistics' | 'settings';
+type Tab = 'courses' | 'teachers' | 'statistics' | 'settings';
 
 export function AdminPanel() {
   const [activeTab, setActiveTab] = useState<Tab>('courses');
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'courses', label: '课程管理' },
+    { id: 'teachers', label: '教师管理' },
     { id: 'statistics', label: '课时统计' },
     { id: 'settings', label: '系统设置' },
   ];
@@ -33,6 +35,7 @@ export function AdminPanel() {
       </div>
       <div>
         {activeTab === 'courses' && <CoursesTab />}
+        {activeTab === 'teachers' && <TeachersTab />}
         {activeTab === 'statistics' && <StatisticsTab />}
         {activeTab === 'settings' && <SettingsTab />}
       </div>

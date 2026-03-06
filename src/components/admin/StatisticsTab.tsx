@@ -48,14 +48,21 @@ export function StatisticsTab() {
   const thisCourses = useMemo(() => allCourses.filter(c => c.date.startsWith(thisPrefix)), [allCourses, thisPrefix]);
   const lastCourses = useMemo(() => allCourses.filter(c => c.date.startsWith(lastPrefix)), [allCourses, lastPrefix]);
 
-  // Compute per-teacher stats for a course list
+  // Only count approved teachers
+  const approvedUsernames = useMemo(() => {
+    const users = getAllUsers();
+    return new Set(users.filter(u => u.approved).map(u => u.username));
+  }, [getAllUsers]);
+
+  // Compute per-teacher stats for a course list (approved only)
   function buildStats(courseList: typeof allCourses) {
     const users = getAllUsers();
-    const map = new Map<string, { displayName: string; count: number; onlineMins: number; offlineMins: number }>();
+    const map = new Map<string, { displayName: string; teacherType: string; count: number; onlineMins: number; offlineMins: number }>();
     for (const c of courseList) {
+      if (!approvedUsernames.has(c.teacher)) continue;
       if (!map.has(c.teacher)) {
         const u = users.find(u => u.username === c.teacher);
-        map.set(c.teacher, { displayName: u?.displayName ?? c.teacher, count: 0, onlineMins: 0, offlineMins: 0 });
+        map.set(c.teacher, { displayName: u?.displayName ?? c.teacher, teacherType: u?.teacherType ?? 'lead', count: 0, onlineMins: 0, offlineMins: 0 });
       }
       const e = map.get(c.teacher)!;
       const mins = calcDurationMinutes(c.startTime, c.endTime);
@@ -72,8 +79,8 @@ export function StatisticsTab() {
     return { rows, totalMins, totalOnline, totalOffline };
   }
 
-  const thisStats = useMemo(() => buildStats(thisCourses), [thisCourses]);
-  const lastStats = useMemo(() => buildStats(lastCourses), [lastCourses]);
+  const thisStats = useMemo(() => buildStats(thisCourses), [thisCourses, approvedUsernames]);
+  const lastStats = useMemo(() => buildStats(lastCourses), [lastCourses, approvedUsernames]);
 
   // All-time per teacher
   const allTimeMins = useMemo(() => {
@@ -218,6 +225,7 @@ export function StatisticsTab() {
                 <thead>
                   <tr className="border-b border-[#e2e8f0]">
                     <th className="px-4 py-2.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide">教师</th>
+                    <th className="px-3 py-2.5 text-center text-xs font-semibold text-[#64748b] uppercase tracking-wide">类型</th>
                     <th className="px-3 py-2.5 text-right text-xs font-semibold text-sky-600 uppercase tracking-wide">
                       <span className="flex items-center justify-end gap-1"><Wifi className="w-3 h-3" />线上</span>
                     </th>
@@ -226,7 +234,7 @@ export function StatisticsTab() {
                     </th>
                     <th className="px-3 py-2.5 text-right text-xs font-semibold text-[#64748b] uppercase tracking-wide">本月合计</th>
                     <th className="px-3 py-2.5 text-right text-xs font-semibold text-[#64748b] uppercase tracking-wide">历史合计</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide w-40">占比</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wide w-36">占比</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -235,6 +243,7 @@ export function StatisticsTab() {
                     const pct = (r.totalMins / maxMins) * 100;
                     const pctStr = thisStats.totalMins > 0 ? (r.totalMins / thisStats.totalMins * 100).toFixed(1) : '0.0';
                     const allTime = allTimeMins.get(r.username) ?? 0;
+                    const isLead = r.teacherType === 'lead';
                     return (
                       <tr key={r.username} className={`border-b border-[#e2e8f0] ${i % 2 === 1 ? 'bg-[#f8fafc]/60' : ''}`}>
                         <td className="px-4 py-3">
@@ -243,6 +252,11 @@ export function StatisticsTab() {
                             <span className="font-medium text-[#0f172a]">{r.displayName}</span>
                             <span className="text-[#94a3b8] text-xs">@{r.username}</span>
                           </div>
+                        </td>
+                        <td className="px-3 py-3 text-center">
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${isLead ? 'bg-[#1e3a5f]/10 text-[#1e3a5f]' : 'bg-amber-100 text-amber-700'}`}>
+                            {isLead ? '主教' : '助教'}
+                          </span>
                         </td>
                         <td className="px-3 py-3 text-right">
                           <span className="text-sky-700 font-medium">{(r.onlineMins / 60).toFixed(1)}h</span>
@@ -268,10 +282,46 @@ export function StatisticsTab() {
                     );
                   })}
                 </tbody>
-                {/* Company total footer */}
                 <tfoot>
+                  {/* Lead subtotal */}
+                  {(() => {
+                    const leadRows = thisStats.rows.filter(r => r.teacherType === 'lead');
+                    const asstRows = thisStats.rows.filter(r => r.teacherType !== 'lead');
+                    const leadMins = leadRows.reduce((s, r) => s + r.totalMins, 0);
+                    const asstMins = asstRows.reduce((s, r) => s + r.totalMins, 0);
+                    const leadOnline = leadRows.reduce((s, r) => s + r.onlineMins, 0);
+                    const asstOnline = asstRows.reduce((s, r) => s + r.onlineMins, 0);
+                    const leadOffline = leadRows.reduce((s, r) => s + r.offlineMins, 0);
+                    const asstOffline = asstRows.reduce((s, r) => s + r.offlineMins, 0);
+                    return (
+                      <>
+                        {leadRows.length > 0 && (
+                          <tr className="border-t border-[#e2e8f0] bg-[#1e3a5f]/3">
+                            <td className="px-4 py-2.5 font-semibold text-[#1e3a5f] text-xs">主教小计</td>
+                            <td />
+                            <td className="px-3 py-2.5 text-right text-xs font-semibold text-sky-700">{(leadOnline / 60).toFixed(1)}h</td>
+                            <td className="px-3 py-2.5 text-right text-xs font-semibold text-emerald-700">{(leadOffline / 60).toFixed(1)}h</td>
+                            <td className="px-3 py-2.5 text-right text-xs font-semibold text-[#0f172a]">{(leadMins / 60).toFixed(1)}h</td>
+                            <td colSpan={2} />
+                          </tr>
+                        )}
+                        {asstRows.length > 0 && (
+                          <tr className="border-t border-[#e2e8f0] bg-amber-50/50">
+                            <td className="px-4 py-2.5 font-semibold text-amber-700 text-xs">助教小计</td>
+                            <td />
+                            <td className="px-3 py-2.5 text-right text-xs font-semibold text-sky-700">{(asstOnline / 60).toFixed(1)}h</td>
+                            <td className="px-3 py-2.5 text-right text-xs font-semibold text-emerald-700">{(asstOffline / 60).toFixed(1)}h</td>
+                            <td className="px-3 py-2.5 text-right text-xs font-semibold text-[#0f172a]">{(asstMins / 60).toFixed(1)}h</td>
+                            <td colSpan={2} />
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })()}
+                  {/* Company total */}
                   <tr className="bg-[#1e3a5f]/5 border-t-2 border-[#1e3a5f]/20">
                     <td className="px-4 py-3 font-bold text-[#1e3a5f] text-sm">公司合计</td>
+                    <td />
                     <td className="px-3 py-3 text-right font-bold text-sky-700">
                       {(thisStats.totalOnline / 60).toFixed(1)}h
                     </td>
