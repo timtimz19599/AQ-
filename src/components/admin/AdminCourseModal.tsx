@@ -17,7 +17,7 @@ export function AdminCourseModal({ course, onClose }: AdminCourseModalProps) {
   const addCourse = useCourseStore(s => s.addCourse);
   const updateCourse = useCourseStore(s => s.updateCourse);
 
-  const teachers = getAllUsers();
+  const teachers = getAllUsers().sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh-CN'));
   const isEdit = !!course;
 
   const initialSelect = course

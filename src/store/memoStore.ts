@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/utils/supabase';
 
 export interface Memo {
   id: string;
-  teacher: string;      // username of creator
+  teacher: string;
   teamName: string;
   content: string;
   status: 'pending' | 'done';
@@ -13,28 +13,42 @@ export interface Memo {
 
 interface MemoState {
   memos: Memo[];
+  loading: boolean;
+  init: () => Promise<void>;
   addMemo: (data: Omit<Memo, 'id' | 'createdAt'>) => void;
   updateMemo: (id: string, data: Partial<Pick<Memo, 'content' | 'status' | 'teamName'>>) => void;
   deleteMemo: (id: string) => void;
 }
 
-export const useMemoStore = create<MemoState>()(
-  persist(
-    (set) => ({
-      memos: [],
+export const useMemoStore = create<MemoState>()((set) => ({
+  memos: [],
+  loading: false,
 
-      addMemo: (data) => {
-        set(s => ({ memos: [...s.memos, { ...data, id: uuidv4(), createdAt: Date.now() }] }));
-      },
+  init: async () => {
+    set({ loading: true });
+    const { data } = await supabase.from('AQMemo').select('*').order('createdAt', { ascending: false });
+    set({ memos: (data as Memo[]) ?? [], loading: false });
+  },
 
-      updateMemo: (id, data) => {
-        set(s => ({ memos: s.memos.map(m => m.id === id ? { ...m, ...data } : m) }));
-      },
+  addMemo: (data) => {
+    const memo: Memo = { ...data, id: uuidv4(), createdAt: Date.now() };
+    set(s => ({ memos: [memo, ...s.memos] }));
+    supabase.from('AQMemo').insert([memo]).then(({ error }) => {
+      if (error) console.error('新增备忘录同步失败：', error.message);
+    });
+  },
 
-      deleteMemo: (id) => {
-        set(s => ({ memos: s.memos.filter(m => m.id !== id) }));
-      },
-    }),
-    { name: 'aq_memos' }
-  )
-);
+  updateMemo: (id, data) => {
+    set(s => ({ memos: s.memos.map(m => m.id === id ? { ...m, ...data } : m) }));
+    supabase.from('AQMemo').update(data).eq('id', id).then(({ error }) => {
+      if (error) console.error('更新备忘录同步失败：', error.message);
+    });
+  },
+
+  deleteMemo: (id) => {
+    set(s => ({ memos: s.memos.filter(m => m.id !== id) }));
+    supabase.from('AQMemo').delete().eq('id', id).then(({ error }) => {
+      if (error) console.error('删除备忘录同步失败：', error.message);
+    });
+  },
+}));

@@ -20,7 +20,8 @@ export function AddCourseModal({ initialDate, initialValues, onAfterAdd, onClose
   const addCourse = useCourseStore(s => s.addCourse);
 
   const today = new Date().toISOString().split('T')[0];
-  const allTeachers = getAllUsers().filter(u => u.username !== session.username);
+  const allTeachers = getAllUsers().filter(u => u.username !== session.username)
+    .sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh-CN'));
 
   // Resolve initial courseName selection
   const initCourseName = initialValues?.courseName ?? COURSE_NAME_OPTIONS[0];

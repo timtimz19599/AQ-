@@ -3,34 +3,20 @@ import type { User, AuthSession, UserRole, TeacherType } from '@/types/user';
 import { hashPassword } from '@/utils/hashPassword';
 import { useSettingsStore } from './settingsStore';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/utils/supabase';
 
 const SESSION_KEY = 'aq_session';
-const USERS_KEY = 'aq_users';
 
-// Normalize users loaded from localStorage (handle missing fields from older data)
 function normalizeUser(u: Partial<User> & { id: string; username: string }): User {
   return {
     teacherType: 'lead',
-    approved: true, // existing users without flag are treated as approved
+    approved: true,
     displayName: u.username,
     passwordHash: '',
     role: 'teacher',
     createdAt: Date.now(),
     ...u,
   } as User;
-}
-
-function loadUsers(): User[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(USERS_KEY) ?? '[]') as Partial<User>[];
-    return raw.map(u => normalizeUser(u as Partial<User> & { id: string; username: string }));
-  } catch {
-    return [];
-  }
-}
-
-function saveUsers(users: User[]): void {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
 }
 
 function loadSession(): AuthSession | null {
@@ -54,6 +40,7 @@ interface AuthState {
   session: AuthSession | null;
   users: User[];
   error: string | null;
+  initUsers: () => Promise<void>;
   login: (username: string, password: string, role: UserRole) => Promise<boolean>;
   logout: () => void;
   register: (username: string, displayName: string, password: string) => Promise<boolean>;
@@ -70,8 +57,17 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
   session: loadSession(),
-  users: loadUsers(),
+  users: [],
   error: null,
+
+  initUsers: async () => {
+    const { data } = await supabase.from('AQUser').select('*').order('createdAt', { ascending: true });
+    const users = (data ?? []).map(u => normalizeUser(u as Partial<User> & { id: string; username: string }));
+    set({ users });
+    // 按注册顺序分配颜色，保证各端颜色一致
+    const { ensureTeacherColor } = useSettingsStore.getState();
+    users.forEach(u => ensureTeacherColor(u.username));
+  },
 
   login: async (username, password, role) => {
     const hash = await hashPassword(password);
@@ -94,7 +90,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       return true;
     }
 
-    // Teacher login
     const users = get().users;
     const user = users.find(u => u.username === username && u.role === 'teacher');
     if (!user || user.passwordHash !== hash) {
@@ -132,13 +127,16 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       passwordHash,
       role: 'teacher',
       teacherType: 'lead',
-      approved: false, // requires admin approval
+      approved: false,
       createdAt: Date.now(),
     };
-    const newUsers = [...users, newUser];
-    saveUsers(newUsers);
+    const { error } = await supabase.from('AQUser').insert([newUser]);
+    if (error) {
+      set({ error: '注册失败，请重试' });
+      return false;
+    }
     useSettingsStore.getState().ensureTeacherColor(username);
-    set({ users: newUsers, error: null });
+    set({ users: [...users, newUser], error: null });
     return true;
   },
 
@@ -163,10 +161,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       displayName: displayName.trim() || user.displayName,
       ...(newPassword ? { passwordHash: await hashPassword(newPassword) } : {}),
     };
-    const newUsers = users.map(u => u.username === session.username ? updatedUser : u);
-    saveUsers(newUsers);
-    set({ users: newUsers });
+    const { error } = await supabase.from('AQUser').update(updatedUser).eq('id', user.id);
+    if (error) return { ok: false, error: '更新失败，请重试' };
 
+    const newUsers = users.map(u => u.username === session.username ? updatedUser : u);
+    set({ users: newUsers });
     const newSession: AuthSession = { ...session, displayName: updatedUser.displayName };
     saveSession(newSession);
     set({ session: newSession });
@@ -178,36 +177,39 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   getAllUsers: () => get().users,
 
   deleteUser: (userId: string) => {
-    const newUsers = get().users.filter(u => u.id !== userId);
-    saveUsers(newUsers);
-    set({ users: newUsers });
+    set(s => ({ users: s.users.filter(u => u.id !== userId) }));
+    supabase.from('AQUser').delete().eq('id', userId).then(({ error }) => {
+      if (error) console.error('删除用户同步失败：', error.message);
+    });
   },
 
   approveTeacher: (userId: string) => {
-    const newUsers = get().users.map(u => u.id === userId ? { ...u, approved: true } : u);
-    saveUsers(newUsers);
-    set({ users: newUsers });
+    set(s => ({ users: s.users.map(u => u.id === userId ? { ...u, approved: true } : u) }));
+    supabase.from('AQUser').update({ approved: true }).eq('id', userId).then(({ error }) => {
+      if (error) console.error('审批用户同步失败：', error.message);
+    });
   },
 
   rejectTeacher: (userId: string) => {
-    // Rejecting = deleting the pending registration
-    const newUsers = get().users.filter(u => u.id !== userId);
-    saveUsers(newUsers);
-    set({ users: newUsers });
+    set(s => ({ users: s.users.filter(u => u.id !== userId) }));
+    supabase.from('AQUser').delete().eq('id', userId).then(({ error }) => {
+      if (error) console.error('拒绝用户同步失败：', error.message);
+    });
   },
 
   updateUser: (userId: string, data: Partial<Pick<User, 'displayName' | 'teacherType'>>) => {
-    const newUsers = get().users.map(u => u.id === userId ? { ...u, ...data } : u);
-    saveUsers(newUsers);
-    set({ users: newUsers });
+    set(s => ({ users: s.users.map(u => u.id === userId ? { ...u, ...data } : u) }));
+    supabase.from('AQUser').update(data).eq('id', userId).then(({ error }) => {
+      if (error) console.error('更新用户同步失败：', error.message);
+    });
   },
 
   resetPassword: async (userId, newPassword) => {
     if (newPassword.length < 6) return { ok: false, error: '密码至少6位' };
     const passwordHash = await hashPassword(newPassword);
-    const newUsers = get().users.map(u => u.id === userId ? { ...u, passwordHash } : u);
-    saveUsers(newUsers);
-    set({ users: newUsers });
+    const { error } = await supabase.from('AQUser').update({ passwordHash }).eq('id', userId);
+    if (error) return { ok: false, error: '重置失败，请重试' };
+    set(s => ({ users: s.users.map(u => u.id === userId ? { ...u, passwordHash } : u) }));
     return { ok: true };
   },
 
@@ -230,10 +232,10 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       approved: true,
       createdAt: Date.now(),
     };
-    const newUsers = [...users, newUser];
-    saveUsers(newUsers);
+    const { error } = await supabase.from('AQUser').insert([newUser]);
+    if (error) return { ok: false, error: '创建失败，请重试' };
     useSettingsStore.getState().ensureTeacherColor(username);
-    set({ users: newUsers });
+    set({ users: [...users, newUser] });
     return { ok: true };
   },
 }));

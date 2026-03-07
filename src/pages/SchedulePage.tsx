@@ -370,7 +370,8 @@ export function SchedulePage() {
         {session?.role === 'admin' && (() => {
           const thisPrefix = `${realYear}-${String(realMonth).padStart(2, '0')}`;
           const allUsers = users;
-          const approvedTeachers = allUsers.filter(u => u.approved && u.role === 'teacher');
+          const approvedTeachers = allUsers.filter(u => u.approved && u.role === 'teacher')
+            .sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh-CN'));
 
           // 本月已完成课时 per teacher
           const teacherMinsMap = new Map<string, number>();
