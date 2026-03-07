@@ -5,7 +5,8 @@ import { useCourseStore } from '@/store/courseStore';
 import { useAuthStore } from '@/store/authStore';
 import { Wifi, MapPin, X } from 'lucide-react';
 import type { Course, CourseMode } from '@/types/course';
-import { COURSE_NAME_OPTIONS } from '@/utils/courseUtils';
+import { COURSE_NAME_OPTIONS, findConflict } from '@/utils/courseUtils';
+import { localDateStr } from '@/utils/timeUtils';
 
 interface AdminCourseModalProps {
   course?: Course;          // undefined = add mode
@@ -16,6 +17,7 @@ export function AdminCourseModal({ course, onClose }: AdminCourseModalProps) {
   const getAllUsers = useAuthStore(s => s.getAllUsers);
   const addCourse = useCourseStore(s => s.addCourse);
   const updateCourse = useCourseStore(s => s.updateCourse);
+  const courses = useCourseStore(s => s.courses);
 
   const teachers = getAllUsers().sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh-CN'));
   const isEdit = !!course;
@@ -31,7 +33,7 @@ export function AdminCourseModal({ course, onClose }: AdminCourseModalProps) {
   const [coTeachers, setCoTeachers] = useState<string[]>(course?.coTeachers ?? []);
   const [form, setForm] = useState({
     teamName: course?.teamName ?? '',
-    date: course?.date ?? new Date().toISOString().split('T')[0],
+    date: course?.date ?? localDateStr(),
     startTime: course?.startTime ?? '09:00',
     endTime: course?.endTime ?? '10:00',
   });
@@ -63,6 +65,10 @@ export function AdminCourseModal({ course, onClose }: AdminCourseModalProps) {
     }
     if (form.startTime >= form.endTime) {
       setError('结束时间必须晚于开始时间'); return;
+    }
+    const conflict = findConflict(courses, teacher, form.date, form.startTime, form.endTime, course?.id);
+    if (conflict) {
+      setError(`时间冲突：该老师在此时段已有课程「${conflict.teamName}」${conflict.startTime}–${conflict.endTime}`); return;
     }
     const data = {
       courseName: resolvedCourseName,

@@ -3,6 +3,7 @@ import { useCourseStore } from '@/store/courseStore';
 import { useAuthStore } from '@/store/authStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { getDayNumber } from '@/utils/courseUtils';
+import { localDateStr } from '@/utils/timeUtils';
 import { Button } from '@/components/common/Button';
 import { AdminCourseModal } from './AdminCourseModal';
 import type { Course } from '@/types/course';
@@ -25,7 +26,7 @@ export function CoursesTab() {
   const [filterStatus, setFilterStatus] = useState<StatusFilter>('all');
 
   const allUsers = getAllUsers();
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateStr();
 
   const filtered = useMemo(() => {
     let base = [...courses].sort((a, b) =>

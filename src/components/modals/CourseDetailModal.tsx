@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { getTextColor, darkenColor } from '@/utils/colorUtils';
 import { getDayNumber } from '@/utils/courseUtils';
+import { localDateStr } from '@/utils/timeUtils';
 import { Wifi, MapPin, Clock, CalendarDays, User, Users, CheckCircle2, XCircle, RefreshCw } from 'lucide-react';
 import { EditCourseModal } from './EditCourseModal';
 import { AddCourseModal } from './AddCourseModal';
@@ -47,7 +48,7 @@ export function CourseDetailModal({ courseId, onClose }: CourseDetailModalProps)
   const dayNum = getDayNumber(course.id, courses);
 
   // Status logic
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateStr();
   const isPast = course.date < todayStr;
   const isToday = course.date === todayStr;
   const isFuture = course.date > todayStr;

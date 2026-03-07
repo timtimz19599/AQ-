@@ -1,9 +1,10 @@
 import type { DaySchedule, Course } from '@/types/course';
-import { parseDateParts, parseMinutes } from '@/utils/timeUtils';
+import { parseDateParts, parseMinutes, localDateStr } from '@/utils/timeUtils';
 import { Sun, Sunset, Moon, Trophy } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { CompactCourseCard } from './CompactCourseCard';
 import { useDeadlineStore } from '@/store/deadlineStore';
+import { useSettingsStore } from '@/store/settingsStore';
 
 type Period = 'morning' | 'afternoon' | 'evening';
 
@@ -29,6 +30,7 @@ interface DayColumnProps {
 export function DayColumn({ schedule, isToday, onCourseClick }: DayColumnProps) {
   const { day } = parseDateParts(schedule.date);
   const allDeadlines = useDeadlineStore(s => s.deadlines);
+  const getTeacherColor = useSettingsStore(s => s.getTeacherColor);
   const deadlines = allDeadlines.filter(d => d.date === schedule.date);
   const hasDeadline = deadlines.length > 0;
 
@@ -45,6 +47,7 @@ export function DayColumn({ schedule, isToday, onCourseClick }: DayColumnProps) 
   }
 
   const activePeriods = PERIODS.filter(p => byPeriod[p.key].length > 0);
+  const allCourses = PERIODS.flatMap(p => byPeriod[p.key]);
 
   return (
     <div className={`border rounded-lg flex flex-col overflow-hidden ${
@@ -73,8 +76,20 @@ export function DayColumn({ schedule, isToday, onCourseClick }: DayColumnProps) 
         </div>
       )}
 
-      {/* Time period sections */}
-      <div className="flex flex-col min-h-[60px]">
+      {/* Mobile: colored dots per course */}
+      <div className="md:hidden flex flex-wrap gap-0.5 p-1 min-h-[40px] items-start content-start">
+        {allCourses.map(course => (
+          <span
+            key={course.id}
+            className="w-2.5 h-2.5 rounded-full cursor-pointer flex-shrink-0 hover:opacity-75 active:opacity-60"
+            style={{ backgroundColor: getTeacherColor(course.teacher) }}
+            onClick={(e) => { e.stopPropagation(); onCourseClick(course.id); }}
+          />
+        ))}
+      </div>
+
+      {/* Desktop: full period sections */}
+      <div className="hidden md:flex flex-col min-h-[60px]">
         {activePeriods.map((p, i) => {
           const { Icon } = p;
           return (

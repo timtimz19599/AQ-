@@ -4,6 +4,7 @@ import { useCourseStore } from '@/store/courseStore';
 import { useAuthStore } from '@/store/authStore';
 import { getTextColor, darkenColor } from '@/utils/colorUtils';
 import { getDayNumber } from '@/utils/courseUtils';
+import { localDateStr } from '@/utils/timeUtils';
 
 interface CourseBlockProps {
   slot: LayoutSlot;
@@ -34,7 +35,7 @@ export function CourseBlock({ slot, onClick }: CourseBlockProps) {
   const hasCoTeacher = coNames.length > 0;
 
   // Status logic
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateStr();
   const isPast = course.date < todayStr;
   const status = course.status;
   const isPending = isPast && status !== 'completed' && status !== 'cancelled';

@@ -1,6 +1,6 @@
 import type { DaySchedule, Course } from '@/types/course';
 import { CompactCourseCard } from './CompactCourseCard';
-import { parseDateParts, parseMinutes } from '@/utils/timeUtils';
+import { parseDateParts, parseMinutes, localDateStr } from '@/utils/timeUtils';
 import { Sun, Sunset, Moon, Trophy } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useDeadlineStore } from '@/store/deadlineStore';
@@ -8,7 +8,7 @@ import { useDeadlineStore } from '@/store/deadlineStore';
 type Period = 'morning' | 'afternoon' | 'evening';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
-const TODAY = new Date().toISOString().split('T')[0];
+const TODAY = localDateStr();
 
 const PERIODS: { key: Period; label: string; Icon: LucideIcon; color: string; bg: string }[] = [
   { key: 'morning',   label: '上午', Icon: Sun,    color: '#d97706', bg: 'rgba(245,158,11,0.06)'  },
@@ -47,7 +47,8 @@ export function WeekGrid({ days, onCourseClick }: WeekGridProps) {
   });
 
   return (
-    <div className="flex flex-col rounded-xl overflow-hidden border border-[#e2e8f0]">
+    <div className="overflow-x-auto">
+    <div className="flex flex-col rounded-xl overflow-hidden border border-[#e2e8f0] min-w-[560px]">
       {/* Header row */}
       <div
         className="grid bg-[#f8fafc] border-b border-[#e2e8f0]"
@@ -137,6 +138,7 @@ export function WeekGrid({ days, onCourseClick }: WeekGridProps) {
       {isEmpty && (
         <div className="py-12 text-center text-[#94a3b8] text-sm">本周暂无排课计划</div>
       )}
+    </div>
     </div>
   );
 }

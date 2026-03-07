@@ -1,8 +1,9 @@
 import type { DaySchedule } from '@/types/course';
 import { DayColumn } from './DayColumn';
+import { localDateStr } from '@/utils/timeUtils';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
-const TODAY = new Date().toISOString().split('T')[0];
+const TODAY = localDateStr();
 
 interface MonthGridProps {
   weeks: (DaySchedule | null)[][];

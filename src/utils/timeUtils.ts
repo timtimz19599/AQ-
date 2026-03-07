@@ -1,3 +1,8 @@
+/** 返回本地时区的今日日期字符串，格式 "YYYY-MM-DD"（不受 UTC 偏移影响） */
+export function localDateStr(date: Date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export function parseMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;

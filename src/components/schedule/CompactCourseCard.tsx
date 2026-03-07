@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useCourseStore } from '@/store/courseStore';
 import { darkenColor } from '@/utils/colorUtils';
 import { getDayNumber } from '@/utils/courseUtils';
+import { localDateStr } from '@/utils/timeUtils';
 
 interface CompactCourseCardProps {
   course: Course;
@@ -18,7 +19,7 @@ export function CompactCourseCard({ course, onClick }: CompactCourseCardProps) {
   const color = getTeacherColor(course.teacher);
   const dark = darkenColor(color, 0.28);
   const isOnline = course.mode === 'online';
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateStr();
   const status = course.status;
   const isPast = course.date < todayStr;
   const isPending = isPast && status !== 'completed' && status !== 'cancelled';

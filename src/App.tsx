@@ -10,6 +10,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useMemoStore } from '@/store/memoStore';
 import { useDeadlineStore } from '@/store/deadlineStore';
 import { useRequestStore } from '@/store/requestStore';
+import { Toaster } from '@/components/common/Toaster';
 
 export default function App() {
   const initCourses = useCourseStore(s => s.init);
@@ -28,6 +29,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <Toaster />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

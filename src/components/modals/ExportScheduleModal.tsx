@@ -4,6 +4,7 @@ import { useCourseStore } from '@/store/courseStore';
 import { useAuthStore } from '@/store/authStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { Printer } from 'lucide-react';
+import { localDateStr } from '@/utils/timeUtils';
 import type { Course } from '@/types/course';
 
 type ViewMode = 'month' | 'week';
@@ -70,7 +71,7 @@ export function ExportScheduleModal({ viewMode, year, month, weekStart, onClose 
       });
     } catch { /* logo optional */ }
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = localDateStr();
     const exportTime = new Date().toLocaleString('zh-CN', {
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit',
@@ -228,7 +229,7 @@ export function ExportScheduleModal({ viewMode, year, month, weekStart, onClose 
   }
 
   // Preview data
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateStr();
   const monthWeeks = viewMode === 'month' ? buildMonthWeeks() : [];
   const weekDays = viewMode === 'week' ? getWeekDays() : [];
 

@@ -85,26 +85,28 @@ export function MonthNavigator({
 
         {/* Export */}
         <Button variant="secondary" size="sm" onClick={onExport} title="导出课表为 PDF">
-          <Download className="w-4 h-4 mr-1" />导出
+          <Download className="w-4 h-4 md:mr-1" /><span className="hidden md:inline">导出</span>
         </Button>
 
         {/* Import – admin only */}
         {isAdmin && (
           <Button variant="secondary" size="sm" onClick={onImport} title="导入课程">
-            <Upload className="w-4 h-4 mr-1" />导入
+            <Upload className="w-4 h-4 md:mr-1" /><span className="hidden md:inline">导入</span>
           </Button>
         )}
 
         {/* Batch add */}
         {canEdit && (
           <Button variant="secondary" size="sm" onClick={onBatchAdd} title="批量添加多节课">
-            <Layers className="w-4 h-4 mr-1" />一键排课
+            <Layers className="w-4 h-4 md:mr-1" /><span className="hidden md:inline">一键排课</span>
           </Button>
         )}
 
-        {/* Single add */}
+        {/* Single add – hidden on mobile (top bar has its own add button) */}
         {canEdit && (
-          <Button variant="primary" size="sm" onClick={onAddCourse}>+ 添加课程</Button>
+          <span className="hidden md:inline-flex">
+            <Button variant="primary" size="sm" onClick={onAddCourse}>+ 添加课程</Button>
+          </span>
         )}
       </div>
     </div>

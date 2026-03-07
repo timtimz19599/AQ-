@@ -16,8 +16,8 @@ import { ExportScheduleModal } from '@/components/modals/ExportScheduleModal';
 import { ImportCoursesModal } from '@/components/modals/ImportCoursesModal';
 import { FeedbackHistoryModal } from '@/components/modals/FeedbackHistoryModal';
 import { MemoModal } from '@/components/modals/MemoModal';
-import { calcDurationMinutes } from '@/utils/timeUtils';
-import { Clock, CalendarDays, TrendingUp, TrendingDown, Minus, Bell, Pencil, LogOut, AlertCircle, Users, Trophy } from 'lucide-react';
+import { calcDurationMinutes, localDateStr } from '@/utils/timeUtils';
+import { Clock, CalendarDays, TrendingUp, TrendingDown, Minus, Bell, Pencil, LogOut, AlertCircle, Users, Trophy, Menu, X } from 'lucide-react';
 import { useDeadlineStore } from '@/store/deadlineStore';
 import { ProfileModal } from '@/components/modals/ProfileModal';
 
@@ -40,6 +40,7 @@ export function SchedulePage() {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Week navigation: start on Sunday of current week
   const [weekStart, setWeekStart] = useState<Date>(() => {
@@ -52,7 +53,7 @@ export function SchedulePage() {
   const users = useAuthStore(s => s.users);
   const allDeadlines = useDeadlineStore(s => s.deadlines);
   const upcomingDeadlines = useMemo(() => {
-    const todayISO = today.toISOString().split('T')[0];
+    const todayISO = localDateStr(today);
     return [...allDeadlines]
       .filter(d => d.date >= todayISO)
       .sort((a, b) => a.date.localeCompare(b.date))
@@ -81,7 +82,7 @@ export function SchedulePage() {
     setWeekStart(d => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; });
   }
 
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = localDateStr(today);
   const nowTimeStr = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
 
   // Stats always based on the REAL current month
@@ -149,12 +150,40 @@ export function SchedulePage() {
   const MONTH_NAMES = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 
   return (
-    <div className="h-screen bg-[#f8fafc] flex overflow-hidden">
+    <div className="h-screen bg-[#f8fafc] flex flex-col md:flex-row overflow-hidden">
+
+      {/* Mobile top bar */}
+      <div className="md:hidden flex items-center justify-between px-3 py-2.5 bg-white border-b border-[#e2e8f0] shrink-0 shadow-sm">
+        <button onClick={() => setSidebarOpen(true)} className="p-1.5 rounded-lg hover:bg-[#f1f5f9] active:bg-[#e2e8f0]">
+          <Menu className="w-5 h-5 text-[#1e3a5f]" />
+        </button>
+        <span className="font-bold text-[#1e3a5f] text-sm">AQ 排课系统</span>
+        {session && (session.role === 'admin' || session.role === 'teacher') ? (
+          <button onClick={() => setShowAddModal(true)} className="text-xs bg-[#1e3a5f] text-white px-2.5 py-1.5 rounded-lg font-medium active:opacity-80">
+            + 添加
+          </button>
+        ) : (
+          <div className="w-12" />
+        )}
+      </div>
+
+      {/* Sidebar overlay (mobile) */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 bg-white border-r border-[#e2e8f0] flex flex-col shadow-sm h-screen">
+      <aside className={`fixed md:relative inset-y-0 left-0 z-40 w-72 md:w-64 shrink-0 bg-white border-r border-[#e2e8f0] flex flex-col shadow-sm h-screen transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
 
         {/* Header */}
-        <div className="bg-gradient-to-b from-[#1e3a5f] to-[#162d4a] px-3 pt-4 pb-4">
+        <div className="bg-gradient-to-b from-[#1e3a5f] to-[#162d4a] px-3 pt-4 pb-4 relative">
+          {/* Close button – mobile only */}
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="md:hidden absolute top-2 right-2 p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10"
+          >
+            <X className="w-4 h-4" />
+          </button>
           {/* Logo — full-width, minimal padding to zoom in */}
           <div
             className="rounded-xl px-1 py-1 mb-3 w-full"
@@ -198,7 +227,7 @@ export function SchedulePage() {
         {/* Nav links */}
         <div className="px-3 py-2 border-b border-[#e2e8f0] flex flex-wrap gap-2">
           {session?.role === 'admin' && (
-            <Link to="/admin" className="text-sm text-[#1e3a5f] hover:underline font-medium">管理面板</Link>
+            <Link to="/admin" onClick={() => setSidebarOpen(false)} className="text-sm text-[#1e3a5f] hover:underline font-medium">管理面板</Link>
           )}
           {session && (
             <button
@@ -527,7 +556,7 @@ export function SchedulePage() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 p-6 overflow-y-auto dot-grid">
+      <main className="flex-1 p-3 md:p-6 overflow-y-auto dot-grid">
         <div className="bg-[#f8fafc]/80 rounded-xl p-4">
           <MonthNavigator
             year={year} month={month}

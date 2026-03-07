@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/utils/supabase';
+import { useToastStore } from './toastStore';
 
 export interface Memo {
   id: string;
@@ -26,7 +27,12 @@ export const useMemoStore = create<MemoState>()((set) => ({
 
   init: async () => {
     set({ loading: true });
-    const { data } = await supabase.from('AQMemo').select('*').order('createdAt', { ascending: false });
+    const { data, error } = await supabase.from('AQMemo').select('*').order('createdAt', { ascending: false });
+    if (error) {
+      set({ loading: false });
+      useToastStore.getState().add('备忘录数据加载失败，请刷新页面重试');
+      return;
+    }
     set({ memos: (data as Memo[]) ?? [], loading: false });
   },
 
@@ -34,21 +40,21 @@ export const useMemoStore = create<MemoState>()((set) => ({
     const memo: Memo = { ...data, id: uuidv4(), createdAt: Date.now() };
     set(s => ({ memos: [memo, ...s.memos] }));
     supabase.from('AQMemo').insert([memo]).then(({ error }) => {
-      if (error) console.error('新增备忘录同步失败：', error.message);
+      if (error) useToastStore.getState().add('添加备忘失败，该备忘可能未保存');
     });
   },
 
   updateMemo: (id, data) => {
     set(s => ({ memos: s.memos.map(m => m.id === id ? { ...m, ...data } : m) }));
     supabase.from('AQMemo').update(data).eq('id', id).then(({ error }) => {
-      if (error) console.error('更新备忘录同步失败：', error.message);
+      if (error) useToastStore.getState().add('更新备忘失败，修改可能未保存');
     });
   },
 
   deleteMemo: (id) => {
     set(s => ({ memos: s.memos.filter(m => m.id !== id) }));
     supabase.from('AQMemo').delete().eq('id', id).then(({ error }) => {
-      if (error) console.error('删除备忘录同步失败：', error.message);
+      if (error) useToastStore.getState().add('删除备忘失败，请重试');
     });
   },
 }));

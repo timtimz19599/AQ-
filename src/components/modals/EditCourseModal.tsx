@@ -5,7 +5,7 @@ import { useCourseStore } from '@/store/courseStore';
 import { useAuthStore } from '@/store/authStore';
 import { Wifi, MapPin, X } from 'lucide-react';
 import type { Course, CourseMode } from '@/types/course';
-import { COURSE_NAME_OPTIONS } from '@/utils/courseUtils';
+import { COURSE_NAME_OPTIONS, findConflict } from '@/utils/courseUtils';
 
 interface EditCourseModalProps {
   course: Course;
@@ -14,6 +14,7 @@ interface EditCourseModalProps {
 
 export function EditCourseModal({ course, onClose }: EditCourseModalProps) {
   const updateCourse = useCourseStore(s => s.updateCourse);
+  const courses = useCourseStore(s => s.courses);
   const getAllUsers = useAuthStore(s => s.getAllUsers);
 
   const allTeachers = getAllUsers().filter(u => u.username !== course.teacher);
@@ -52,6 +53,10 @@ export function EditCourseModal({ course, onClose }: EditCourseModalProps) {
     }
     if (form.startTime >= form.endTime) {
       setError('结束时间必须晚于开始时间'); return;
+    }
+    const conflict = findConflict(courses, course.teacher, form.date, form.startTime, form.endTime, course.id);
+    if (conflict) {
+      setError(`时间冲突：该老师在此时段已有课程「${conflict.teamName}」${conflict.startTime}–${conflict.endTime}`); return;
     }
     updateCourse(course.id, {
       courseName: resolvedCourseName,

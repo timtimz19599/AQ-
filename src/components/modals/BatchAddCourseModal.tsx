@@ -5,7 +5,8 @@ import { useCourseStore } from '@/store/courseStore';
 import { useAuthStore } from '@/store/authStore';
 import { Wifi, MapPin, X, Plus, Trash2 } from 'lucide-react';
 import type { CourseMode } from '@/types/course';
-import { COURSE_NAME_OPTIONS } from '@/utils/courseUtils';
+import { COURSE_NAME_OPTIONS, findConflict } from '@/utils/courseUtils';
+import { localDateStr } from '@/utils/timeUtils';
 import { v4 as uuidv4 } from 'uuid';
 
 interface Session {
@@ -24,10 +25,11 @@ export function BatchAddCourseModal({ onClose }: BatchAddCourseModalProps) {
   const session = useAuthStore(s => s.session)!;
   const getAllUsers = useAuthStore(s => s.getAllUsers);
   const addCourse = useCourseStore(s => s.addCourse);
+  const courses = useCourseStore(s => s.courses);
 
   const allTeachers = getAllUsers();
   const isAdmin = session.role === 'admin';
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
 
   // Shared fields
   const [courseNameSelect, setCourseNameSelect] = useState<string>(COURSE_NAME_OPTIONS[0]);
@@ -82,6 +84,23 @@ export function BatchAddCourseModal({ onClose }: BatchAddCourseModalProps) {
     for (const s of sessions) {
       if (!s.date || !s.startTime || !s.endTime) { setError('请填写所有课次的日期和时间'); return; }
       if (s.startTime >= s.endTime) { setError('结束时间必须晚于开始时间'); return; }
+    }
+
+    const targetTeacher = isAdmin ? teacher : session.username;
+    for (let i = 0; i < sessions.length; i++) {
+      const s = sessions[i];
+      // 与已有课程冲突
+      const conflict = findConflict(courses, targetTeacher, s.date, s.startTime, s.endTime);
+      if (conflict) {
+        setError(`第 ${i + 1} 节时间冲突：该老师在此时段已有课程「${conflict.teamName}」${conflict.startTime}–${conflict.endTime}`); return;
+      }
+      // 批次内课次互相冲突
+      for (let j = 0; j < i; j++) {
+        const other = sessions[j];
+        if (other.date === s.date && other.startTime < s.endTime && s.startTime < other.endTime) {
+          setError(`第 ${j + 1} 节与第 ${i + 1} 节时间重叠，请检查`); return;
+        }
+      }
     }
 
     for (const s of sessions) {

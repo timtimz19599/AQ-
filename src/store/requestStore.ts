@@ -4,6 +4,7 @@ import type { Course } from '@/types/course';
 import { v4 as uuidv4 } from 'uuid';
 import { useCourseStore } from './courseStore';
 import { supabase } from '@/utils/supabase';
+import { useToastStore } from './toastStore';
 
 interface RequestState {
   requests: ModificationRequest[];
@@ -28,7 +29,12 @@ export const useRequestStore = create<RequestState>()((set, get) => ({
 
   init: async () => {
     set({ loading: true });
-    const { data } = await supabase.from('AQRequest').select('*').order('requestedAt', { ascending: false });
+    const { data, error } = await supabase.from('AQRequest').select('*').order('requestedAt', { ascending: false });
+    if (error) {
+      set({ loading: false });
+      useToastStore.getState().add('申请数据加载失败，请刷新页面重试');
+      return;
+    }
     set({ requests: (data as ModificationRequest[]) ?? [], loading: false });
   },
 
@@ -47,7 +53,7 @@ export const useRequestStore = create<RequestState>()((set, get) => ({
     };
     set(s => ({ requests: [req, ...s.requests] }));
     supabase.from('AQRequest').insert([req]).then(({ error }) => {
-      if (error) console.error('提交申请同步失败：', error.message);
+      if (error) useToastStore.getState().add('提交申请失败，该申请可能未保存');
     });
   },
 
@@ -66,7 +72,7 @@ export const useRequestStore = create<RequestState>()((set, get) => ({
       requests: s.requests.map(r => r.id === id ? { ...r, ...update } : r),
     }));
     supabase.from('AQRequest').update(update).eq('id', id).then(({ error }) => {
-      if (error) console.error('审批申请同步失败：', error.message);
+      if (error) useToastStore.getState().add('审批操作失败，请重试');
     });
   },
 
@@ -76,7 +82,7 @@ export const useRequestStore = create<RequestState>()((set, get) => ({
       requests: s.requests.map(r => r.id === id ? { ...r, ...update } : r),
     }));
     supabase.from('AQRequest').update(update).eq('id', id).then(({ error }) => {
-      if (error) console.error('拒绝申请同步失败：', error.message);
+      if (error) useToastStore.getState().add('拒绝操作失败，请重试');
     });
   },
 

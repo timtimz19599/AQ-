@@ -3,6 +3,7 @@ import { useDeadlineStore } from '@/store/deadlineStore';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/common/Button';
 import { Plus, Trash2, Trophy, CalendarDays, Pencil, Check, X } from 'lucide-react';
+import { localDateStr } from '@/utils/timeUtils';
 
 export function DeadlinesTab() {
   const { deadlines, addDeadline, updateDeadline, deleteDeadline } = useDeadlineStore();
@@ -19,7 +20,7 @@ export function DeadlinesTab() {
   const [editDesc, setEditDesc] = useState('');
 
   const sorted = [...deadlines].sort((a, b) => a.date.localeCompare(b.date));
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = localDateStr();
 
   function handleAdd() {
     if (!formDate) { setFormError('请选择日期'); return; }

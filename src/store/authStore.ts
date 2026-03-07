@@ -4,6 +4,7 @@ import { hashPassword } from '@/utils/hashPassword';
 import { useSettingsStore } from './settingsStore';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/utils/supabase';
+import { useToastStore } from './toastStore';
 
 const SESSION_KEY = 'aq_session';
 
@@ -61,7 +62,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   error: null,
 
   initUsers: async () => {
-    const { data } = await supabase.from('AQUser').select('*').order('createdAt', { ascending: true });
+    const { data, error } = await supabase.from('AQUser').select('*').order('createdAt', { ascending: true });
+    if (error) {
+      useToastStore.getState().add('用户数据加载失败，请刷新页面重试');
+      return;
+    }
     const users = (data ?? []).map(u => normalizeUser(u as Partial<User> & { id: string; username: string }));
     set({ users });
     // 按注册顺序分配颜色，保证各端颜色一致
@@ -179,28 +184,28 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   deleteUser: (userId: string) => {
     set(s => ({ users: s.users.filter(u => u.id !== userId) }));
     supabase.from('AQUser').delete().eq('id', userId).then(({ error }) => {
-      if (error) console.error('删除用户同步失败：', error.message);
+      if (error) useToastStore.getState().add('删除用户失败，请重试');
     });
   },
 
   approveTeacher: (userId: string) => {
     set(s => ({ users: s.users.map(u => u.id === userId ? { ...u, approved: true } : u) }));
     supabase.from('AQUser').update({ approved: true }).eq('id', userId).then(({ error }) => {
-      if (error) console.error('审批用户同步失败：', error.message);
+      if (error) useToastStore.getState().add('审批用户失败，请重试');
     });
   },
 
   rejectTeacher: (userId: string) => {
     set(s => ({ users: s.users.filter(u => u.id !== userId) }));
     supabase.from('AQUser').delete().eq('id', userId).then(({ error }) => {
-      if (error) console.error('拒绝用户同步失败：', error.message);
+      if (error) useToastStore.getState().add('拒绝用户失败，请重试');
     });
   },
 
   updateUser: (userId: string, data: Partial<Pick<User, 'displayName' | 'teacherType'>>) => {
     set(s => ({ users: s.users.map(u => u.id === userId ? { ...u, ...data } : u) }));
     supabase.from('AQUser').update(data).eq('id', userId).then(({ error }) => {
-      if (error) console.error('更新用户同步失败：', error.message);
+      if (error) useToastStore.getState().add('更新用户信息失败，请重试');
     });
   },
 

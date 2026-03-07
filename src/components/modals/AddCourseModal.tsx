@@ -5,7 +5,8 @@ import { useCourseStore } from '@/store/courseStore';
 import { useAuthStore } from '@/store/authStore';
 import { Wifi, MapPin, X } from 'lucide-react';
 import type { Course, CourseMode } from '@/types/course';
-import { COURSE_NAME_OPTIONS } from '@/utils/courseUtils';
+import { COURSE_NAME_OPTIONS, findConflict } from '@/utils/courseUtils';
+import { localDateStr } from '@/utils/timeUtils';
 
 interface AddCourseModalProps {
   initialDate?: string;
@@ -18,8 +19,9 @@ export function AddCourseModal({ initialDate, initialValues, onAfterAdd, onClose
   const session = useAuthStore(s => s.session)!;
   const getAllUsers = useAuthStore(s => s.getAllUsers);
   const addCourse = useCourseStore(s => s.addCourse);
+  const courses = useCourseStore(s => s.courses);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const allTeachers = getAllUsers().filter(u => u.username !== session.username)
     .sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh-CN'));
 
@@ -59,6 +61,10 @@ export function AddCourseModal({ initialDate, initialValues, onAfterAdd, onClose
     }
     if (form.startTime >= form.endTime) {
       setError('结束时间必须晚于开始时间'); return;
+    }
+    const conflict = findConflict(courses, session.username, form.date, form.startTime, form.endTime);
+    if (conflict) {
+      setError(`时间冲突：你在该时段已有课程「${conflict.teamName}」${conflict.startTime}–${conflict.endTime}`); return;
     }
     addCourse({
       courseName: resolvedCourseName,
