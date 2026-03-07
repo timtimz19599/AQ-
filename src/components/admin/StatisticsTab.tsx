@@ -45,8 +45,8 @@ export function StatisticsTab() {
   const thisPrefix = `${year}-${String(month).padStart(2, '0')}`;
   const lastPrefix = `${lastYear}-${String(lastMonth).padStart(2, '0')}`;
 
-  const thisCourses = useMemo(() => allCourses.filter(c => c.date.startsWith(thisPrefix)), [allCourses, thisPrefix]);
-  const lastCourses = useMemo(() => allCourses.filter(c => c.date.startsWith(lastPrefix)), [allCourses, lastPrefix]);
+  const thisCourses = useMemo(() => allCourses.filter(c => c.date.startsWith(thisPrefix) && c.status === 'completed'), [allCourses, thisPrefix]);
+  const lastCourses = useMemo(() => allCourses.filter(c => c.date.startsWith(lastPrefix) && c.status === 'completed'), [allCourses, lastPrefix]);
 
   // Only count approved teachers
   const approvedUsernames = useMemo(() => {
@@ -82,10 +82,11 @@ export function StatisticsTab() {
   const thisStats = useMemo(() => buildStats(thisCourses), [thisCourses, approvedUsernames]);
   const lastStats = useMemo(() => buildStats(lastCourses), [lastCourses, approvedUsernames]);
 
-  // All-time per teacher
+  // All-time per teacher: 只计 completed
   const allTimeMins = useMemo(() => {
     const map = new Map<string, number>();
     for (const c of allCourses) {
+      if (c.status !== 'completed') continue;
       map.set(c.teacher, (map.get(c.teacher) ?? 0) + calcDurationMinutes(c.startTime, c.endTime));
     }
     return map;

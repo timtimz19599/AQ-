@@ -1,5 +1,13 @@
 export type CourseMode = 'online' | 'offline';
 
+export type CourseStatus = 'scheduled' | 'completed' | 'cancelled';
+
+export interface CourseFeedback {
+  contentSummary: string;  // 内容简述
+  attendance: string;      // 学生出勤情况
+  submittedAt: number;     // 时间戳
+}
+
 export interface Course {
   id: string;
   courseName: string;
@@ -12,6 +20,8 @@ export interface Course {
   coTeachers?: string[];
   createdAt: number;
   createdBy: string;
+  status?: CourseStatus;      // undefined 视同 'scheduled'
+  feedback?: CourseFeedback;
 }
 
 export interface LayoutSlot {

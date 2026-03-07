@@ -4,15 +4,17 @@ import { Button } from '@/components/common/Button';
 import { useCourseStore } from '@/store/courseStore';
 import { useAuthStore } from '@/store/authStore';
 import { Wifi, MapPin, X } from 'lucide-react';
-import type { CourseMode } from '@/types/course';
+import type { Course, CourseMode } from '@/types/course';
 import { COURSE_NAME_OPTIONS } from '@/utils/courseUtils';
 
 interface AddCourseModalProps {
   initialDate?: string;
+  initialValues?: Partial<Course>;
+  onAfterAdd?: () => void;
   onClose: () => void;
 }
 
-export function AddCourseModal({ initialDate, onClose }: AddCourseModalProps) {
+export function AddCourseModal({ initialDate, initialValues, onAfterAdd, onClose }: AddCourseModalProps) {
   const session = useAuthStore(s => s.session)!;
   const getAllUsers = useAuthStore(s => s.getAllUsers);
   const addCourse = useCourseStore(s => s.addCourse);
@@ -20,16 +22,20 @@ export function AddCourseModal({ initialDate, onClose }: AddCourseModalProps) {
   const today = new Date().toISOString().split('T')[0];
   const allTeachers = getAllUsers().filter(u => u.username !== session.username);
 
-  const [courseNameSelect, setCourseNameSelect] = useState<string>(COURSE_NAME_OPTIONS[0]);
-  const [courseNameCustom, setCourseNameCustom] = useState('');
+  // Resolve initial courseName selection
+  const initCourseName = initialValues?.courseName ?? COURSE_NAME_OPTIONS[0];
+  const isKnown = (COURSE_NAME_OPTIONS as readonly string[]).includes(initCourseName) && initCourseName !== '其他';
+  const [courseNameSelect, setCourseNameSelect] = useState<string>(isKnown ? initCourseName : '其他');
+  const [courseNameCustom, setCourseNameCustom] = useState(isKnown ? '' : initCourseName);
+
   const [form, setForm] = useState({
-    teamName: '',
-    date: initialDate ?? today,
-    startTime: '09:00',
-    endTime: '10:00',
+    teamName: initialValues?.teamName ?? '',
+    date: initialValues?.date ?? initialDate ?? today,
+    startTime: initialValues?.startTime ?? '09:00',
+    endTime: initialValues?.endTime ?? '10:00',
   });
-  const [mode, setMode] = useState<CourseMode>('offline');
-  const [coTeachers, setCoTeachers] = useState<string[]>([]);
+  const [mode, setMode] = useState<CourseMode>(initialValues?.mode ?? 'offline');
+  const [coTeachers, setCoTeachers] = useState<string[]>(initialValues?.coTeachers ?? []);
   const [error, setError] = useState('');
 
   const isCustom = courseNameSelect === '其他';
@@ -64,14 +70,21 @@ export function AddCourseModal({ initialDate, onClose }: AddCourseModalProps) {
       coTeachers: coTeachers.length > 0 ? coTeachers : undefined,
       createdBy: session.username,
     });
+    onAfterAdd?.();
     onClose();
   }
 
   const inputCls = 'border border-[#e2e8f0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#1e3a5f]/40 focus:border-[#1e3a5f] text-sm w-full';
 
   return (
-    <Modal title="添加课程" onClose={onClose}>
+    <Modal title={initialValues ? '调课 · 新排课程' : '添加课程'} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+
+        {initialValues && (
+          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            提交后将自动取消原课程。请修改日期或时间后提交。
+          </div>
+        )}
 
         {/* Course name */}
         <div className="flex flex-col gap-1 text-sm">
@@ -159,7 +172,7 @@ export function AddCourseModal({ initialDate, onClose }: AddCourseModalProps) {
         {error && <p className="text-red-500 text-sm">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>取消</Button>
-          <Button type="submit">添加</Button>
+          <Button type="submit">{initialValues ? '提交新课程' : '添加'}</Button>
         </div>
       </form>
     </Modal>
