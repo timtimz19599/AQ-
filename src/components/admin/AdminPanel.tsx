@@ -3,22 +3,26 @@ import { StatisticsTab } from './StatisticsTab';
 import { SettingsTab } from './SettingsTab';
 import { CoursesTab } from './CoursesTab';
 import { TeachersTab } from './TeachersTab';
+import { FeedbackTab } from './FeedbackTab';
+import { DeadlinesTab } from './DeadlinesTab';
 
-type Tab = 'courses' | 'teachers' | 'statistics' | 'settings';
+type Tab = 'courses' | 'teachers' | 'statistics' | 'feedback' | 'deadlines' | 'settings';
 
 export function AdminPanel() {
   const [activeTab, setActiveTab] = useState<Tab>('courses');
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'courses', label: '课程管理' },
-    { id: 'teachers', label: '教师管理' },
-    { id: 'statistics', label: '课时统计' },
-    { id: 'settings', label: '系统设置' },
+    { id: 'courses',   label: '课程管理' },
+    { id: 'teachers',  label: '教师管理' },
+    { id: 'statistics',label: '课时统计' },
+    { id: 'feedback',  label: '课程反馈' },
+    { id: 'deadlines', label: '比赛日程' },
+    { id: 'settings',  label: '系统设置' },
   ];
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-1 border-b border-[#e2e8f0]">
+      <div className="flex gap-1 border-b border-[#e2e8f0] flex-wrap">
         {tabs.map(t => (
           <button
             key={t.id}
@@ -34,10 +38,12 @@ export function AdminPanel() {
         ))}
       </div>
       <div>
-        {activeTab === 'courses' && <CoursesTab />}
-        {activeTab === 'teachers' && <TeachersTab />}
+        {activeTab === 'courses'    && <CoursesTab />}
+        {activeTab === 'teachers'   && <TeachersTab />}
         {activeTab === 'statistics' && <StatisticsTab />}
-        {activeTab === 'settings' && <SettingsTab />}
+        {activeTab === 'feedback'   && <FeedbackTab />}
+        {activeTab === 'deadlines'  && <DeadlinesTab />}
+        {activeTab === 'settings'   && <SettingsTab />}
       </div>
     </div>
   );

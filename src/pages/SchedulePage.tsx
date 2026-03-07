@@ -11,8 +11,14 @@ import { MonthNavigator, type ViewMode } from '@/components/schedule/MonthNaviga
 import { AddCourseModal } from '@/components/modals/AddCourseModal';
 import { CourseDetailModal } from '@/components/modals/CourseDetailModal';
 import { AdminCourseModal } from '@/components/admin/AdminCourseModal';
+import { BatchAddCourseModal } from '@/components/modals/BatchAddCourseModal';
+import { ExportScheduleModal } from '@/components/modals/ExportScheduleModal';
+import { ImportCoursesModal } from '@/components/modals/ImportCoursesModal';
+import { FeedbackHistoryModal } from '@/components/modals/FeedbackHistoryModal';
+import { MemoModal } from '@/components/modals/MemoModal';
 import { calcDurationMinutes } from '@/utils/timeUtils';
-import { Clock, CalendarDays, TrendingUp, TrendingDown, Minus, Bell, Pencil, LogOut, AlertCircle, Users } from 'lucide-react';
+import { Clock, CalendarDays, TrendingUp, TrendingDown, Minus, Bell, Pencil, LogOut, AlertCircle, Users, Trophy } from 'lucide-react';
+import { useDeadlineStore } from '@/store/deadlineStore';
 import { ProfileModal } from '@/components/modals/ProfileModal';
 
 export function SchedulePage() {
@@ -26,6 +32,11 @@ export function SchedulePage() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showFeedbackHistory, setShowFeedbackHistory] = useState(false);
+  const [showMemoModal, setShowMemoModal] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('month');
@@ -39,6 +50,14 @@ export function SchedulePage() {
   });
 
   const users = useAuthStore(s => s.users);
+  const allDeadlines = useDeadlineStore(s => s.deadlines);
+  const upcomingDeadlines = useMemo(() => {
+    const todayISO = today.toISOString().split('T')[0];
+    return [...allDeadlines]
+      .filter(d => d.date >= todayISO)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 3);
+  }, [allDeadlines]);
   const filterUsername = session?.role === 'teacher' ? session.username : undefined;
   const approvedUsernames = useMemo(() => {
     if (session?.role !== 'admin') return undefined;
@@ -177,11 +196,27 @@ export function SchedulePage() {
         </div>
 
         {/* Nav links */}
-        {session?.role === 'admin' && (
-          <div className="px-3 py-2.5 border-b border-[#e2e8f0]">
+        <div className="px-3 py-2 border-b border-[#e2e8f0] flex flex-wrap gap-2">
+          {session?.role === 'admin' && (
             <Link to="/admin" className="text-sm text-[#1e3a5f] hover:underline font-medium">管理面板</Link>
-          </div>
-        )}
+          )}
+          {session && (
+            <button
+              onClick={() => setShowFeedbackHistory(true)}
+              className="text-sm text-[#1e3a5f] hover:underline font-medium"
+            >
+              反馈历史
+            </button>
+          )}
+          {session?.role === 'teacher' && (
+            <button
+              onClick={() => setShowMemoModal(true)}
+              className="text-sm text-[#1e3a5f] hover:underline font-medium"
+            >
+              备忘录
+            </button>
+          )}
+        </div>
 
         {/* Pending approval banner */}
         {session?.role === 'teacher' && session.approved === false && (
@@ -445,6 +480,32 @@ export function SchedulePage() {
           <div className="flex-1 p-3" />
         )}
 
+        {/* Upcoming deadlines widget – visible to all logged-in users */}
+        {session && upcomingDeadlines.length > 0 && (
+          <div className="mx-3 mb-3 rounded-xl border border-amber-200 bg-amber-50 overflow-hidden">
+            <div className="flex items-center gap-1.5 px-3 py-2 border-b border-amber-200">
+              <Trophy className="w-3.5 h-3.5 text-amber-600" />
+              <span className="text-xs font-semibold text-amber-700">即将截止</span>
+            </div>
+            <div className="flex flex-col divide-y divide-amber-100">
+              {upcomingDeadlines.map(d => {
+                const daysLeft = Math.ceil((new Date(d.date).getTime() - new Date(todayStr).getTime()) / 86400000);
+                return (
+                  <div key={d.id} className="px-3 py-1.5">
+                    <div className="text-xs font-semibold text-amber-800 truncate">{d.title}</div>
+                    <div className="flex items-center justify-between mt-0.5">
+                      <span className="text-[10px] text-amber-600">{d.date}</span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${daysLeft === 0 ? 'bg-red-500 text-white' : daysLeft <= 7 ? 'bg-amber-400 text-white' : 'bg-amber-200 text-amber-700'}`}>
+                        {daysLeft === 0 ? '今天！' : `${daysLeft}天后`}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Bottom logout */}
         <div className="p-3 border-t border-[#e2e8f0]">
           {session ? (
@@ -472,6 +533,9 @@ export function SchedulePage() {
             onPrev={viewMode === 'month' ? prevMonth : prevWeek}
             onNext={viewMode === 'month' ? nextMonth : nextWeek}
             onAddCourse={() => setShowAddModal(true)}
+            onBatchAdd={() => setShowBatchModal(true)}
+            onExport={() => setShowExportModal(true)}
+            onImport={() => setShowImportModal(true)}
             viewMode={viewMode}
             onViewChange={setViewMode}
             weekStart={weekStart}
@@ -493,6 +557,21 @@ export function SchedulePage() {
           onClose={() => setShowAddModal(false)}
         />
       )}
+      {showBatchModal && (
+        <BatchAddCourseModal onClose={() => setShowBatchModal(false)} />
+      )}
+      {showExportModal && (
+        <ExportScheduleModal
+          viewMode={viewMode}
+          year={year}
+          month={month}
+          weekStart={viewMode === 'week' ? weekStart : undefined}
+          onClose={() => setShowExportModal(false)}
+        />
+      )}
+      {showImportModal && (
+        <ImportCoursesModal onClose={() => setShowImportModal(false)} />
+      )}
       {selectedCourseId && (
         <CourseDetailModal
           courseId={selectedCourseId}
@@ -501,6 +580,15 @@ export function SchedulePage() {
       )}
       {showProfile && (
         <ProfileModal onClose={() => setShowProfile(false)} />
+      )}
+      {showFeedbackHistory && (
+        <FeedbackHistoryModal
+          onClose={() => setShowFeedbackHistory(false)}
+          filterTeacher={session?.role === 'teacher' ? session.username : undefined}
+        />
+      )}
+      {showMemoModal && (
+        <MemoModal onClose={() => setShowMemoModal(false)} />
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 import { Button } from '@/components/common/Button';
 import { useAuthStore } from '@/store/authStore';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Layers, Download, Upload } from 'lucide-react';
 
 const MONTH_NAMES = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 
@@ -12,6 +12,9 @@ interface MonthNavigatorProps {
   onPrev: () => void;
   onNext: () => void;
   onAddCourse: () => void;
+  onBatchAdd: () => void;
+  onExport: () => void;
+  onImport: () => void;
   viewMode: ViewMode;
   onViewChange: (mode: ViewMode) => void;
   weekStart?: Date;
@@ -31,12 +34,17 @@ function weekTitle(weekStart: Date): string {
   return `${sy}年 ${sm}月${sd}日 – ${em}月${ed}日`;
 }
 
-export function MonthNavigator({ year, month, onPrev, onNext, onAddCourse, viewMode, onViewChange, weekStart }: MonthNavigatorProps) {
+export function MonthNavigator({
+  year, month, onPrev, onNext, onAddCourse, onBatchAdd, onExport, onImport,
+  viewMode, onViewChange, weekStart,
+}: MonthNavigatorProps) {
   const session = useAuthStore(s => s.session);
-  const isTeacher = session?.role === 'teacher';
+  const canEdit = session?.role === 'teacher' || session?.role === 'admin';
+  const isAdmin = session?.role === 'admin';
 
   return (
-    <div className="flex items-center justify-between mb-4 px-1">
+    <div className="flex items-center justify-between mb-4 px-1 flex-wrap gap-2">
+      {/* Date navigation */}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={onPrev}>
           <ChevronLeft className="w-4 h-4" />
@@ -53,7 +61,8 @@ export function MonthNavigator({ year, month, onPrev, onNext, onAddCourse, viewM
         </Button>
       </div>
 
-      <div className="flex items-center gap-2">
+      {/* Right controls */}
+      <div className="flex items-center gap-2 flex-wrap">
         {/* View toggle */}
         <div className="flex rounded-lg border border-[#e2e8f0] overflow-hidden text-sm">
           <button
@@ -74,7 +83,27 @@ export function MonthNavigator({ year, month, onPrev, onNext, onAddCourse, viewM
           </button>
         </div>
 
-        {(isTeacher || session?.role === 'admin') && (
+        {/* Export */}
+        <Button variant="secondary" size="sm" onClick={onExport} title="导出课表为 PDF">
+          <Download className="w-4 h-4 mr-1" />导出
+        </Button>
+
+        {/* Import – admin only */}
+        {isAdmin && (
+          <Button variant="secondary" size="sm" onClick={onImport} title="导入课程">
+            <Upload className="w-4 h-4 mr-1" />导入
+          </Button>
+        )}
+
+        {/* Batch add */}
+        {canEdit && (
+          <Button variant="secondary" size="sm" onClick={onBatchAdd} title="批量添加多节课">
+            <Layers className="w-4 h-4 mr-1" />一键排课
+          </Button>
+        )}
+
+        {/* Single add */}
+        {canEdit && (
           <Button variant="primary" size="sm" onClick={onAddCourse}>+ 添加课程</Button>
         )}
       </div>
