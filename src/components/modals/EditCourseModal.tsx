@@ -3,7 +3,7 @@ import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
 import { useCourseStore } from '@/store/courseStore';
 import { useAuthStore } from '@/store/authStore';
-import { Wifi, MapPin, X } from 'lucide-react';
+import { Wifi, MapPin, X, AlertTriangle } from 'lucide-react';
 import type { Course, CourseMode } from '@/types/course';
 import { COURSE_NAME_OPTIONS, findConflict } from '@/utils/courseUtils';
 
@@ -34,6 +34,7 @@ export function EditCourseModal({ course, onClose }: EditCourseModalProps) {
   const [mode, setMode] = useState<CourseMode>(course.mode ?? 'offline');
   const [coTeachers, setCoTeachers] = useState<string[]>(course.coTeachers ?? []);
   const [error, setError] = useState('');
+  const [conflictWarning, setConflictWarning] = useState('');
 
   const isCustom = courseNameSelect === '其他';
   const resolvedCourseName = isCustom ? courseNameCustom.trim() : courseNameSelect;
@@ -46,18 +47,7 @@ export function EditCourseModal({ course, onClose }: EditCourseModalProps) {
     setCoTeachers(prev => prev.includes(username) ? prev.filter(u => u !== username) : [...prev, username]);
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!resolvedCourseName || !form.teamName || !form.date || !form.startTime || !form.endTime) {
-      setError('请填写所有字段'); return;
-    }
-    if (form.startTime >= form.endTime) {
-      setError('结束时间必须晚于开始时间'); return;
-    }
-    const conflict = findConflict(courses, course.teacher, form.date, form.startTime, form.endTime, course.id);
-    if (conflict) {
-      setError(`时间冲突：该老师在此时段已有课程「${conflict.teamName}」${conflict.startTime}–${conflict.endTime}`); return;
-    }
+  function doUpdate() {
     updateCourse(course.id, {
       courseName: resolvedCourseName,
       teamName: form.teamName,
@@ -68,6 +58,22 @@ export function EditCourseModal({ course, onClose }: EditCourseModalProps) {
       coTeachers: coTeachers.length > 0 ? coTeachers : undefined,
     });
     onClose();
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setConflictWarning('');
+    if (!resolvedCourseName || !form.teamName || !form.date || !form.startTime || !form.endTime) {
+      setError('请填写所有字段'); return;
+    }
+    if (form.startTime >= form.endTime) {
+      setError('结束时间必须晚于开始时间'); return;
+    }
+    const conflict = findConflict(courses, course.teacher, form.date, form.startTime, form.endTime, course.id);
+    if (conflict) {
+      setConflictWarning(`该老师在此时段已有课程「${conflict.teamName}」${conflict.startTime}–${conflict.endTime}`); return;
+    }
+    doUpdate();
   }
 
   const inputCls = 'border border-[#e2e8f0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#1e3a5f]/40 focus:border-[#1e3a5f] text-sm w-full';
@@ -152,10 +158,26 @@ export function EditCourseModal({ course, onClose }: EditCourseModalProps) {
         )}
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>取消</Button>
-          <Button type="submit">保存修改</Button>
-        </div>
+        {conflictWarning ? (
+          <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 flex flex-col gap-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">时间冲突提醒</p>
+                <p className="text-xs text-amber-700 mt-0.5">{conflictWarning}</p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="secondary" onClick={() => setConflictWarning('')}>重新选择时间</Button>
+              <Button type="button" onClick={doUpdate}>仍然保存</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={onClose}>取消</Button>
+            <Button type="submit">保存修改</Button>
+          </div>
+        )}
       </form>
     </Modal>
   );

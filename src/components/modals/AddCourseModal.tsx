@@ -3,7 +3,7 @@ import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
 import { useCourseStore } from '@/store/courseStore';
 import { useAuthStore } from '@/store/authStore';
-import { Wifi, MapPin, X } from 'lucide-react';
+import { Wifi, MapPin, X, AlertTriangle } from 'lucide-react';
 import type { Course, CourseMode } from '@/types/course';
 import { COURSE_NAME_OPTIONS, findConflict } from '@/utils/courseUtils';
 import { localDateStr } from '@/utils/timeUtils';
@@ -40,6 +40,7 @@ export function AddCourseModal({ initialDate, initialValues, onAfterAdd, onClose
   const [mode, setMode] = useState<CourseMode>(initialValues?.mode ?? 'offline');
   const [coTeachers, setCoTeachers] = useState<string[]>(initialValues?.coTeachers ?? []);
   const [error, setError] = useState('');
+  const [conflictWarning, setConflictWarning] = useState('');
 
   const isCustom = courseNameSelect === '其他';
   const resolvedCourseName = isCustom ? courseNameCustom.trim() : courseNameSelect;
@@ -54,18 +55,7 @@ export function AddCourseModal({ initialDate, initialValues, onAfterAdd, onClose
     );
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!resolvedCourseName || !form.teamName || !form.date || !form.startTime || !form.endTime) {
-      setError('请填写所有字段'); return;
-    }
-    if (form.startTime >= form.endTime) {
-      setError('结束时间必须晚于开始时间'); return;
-    }
-    const conflict = findConflict(courses, session.username, form.date, form.startTime, form.endTime);
-    if (conflict) {
-      setError(`时间冲突：你在该时段已有课程「${conflict.teamName}」${conflict.startTime}–${conflict.endTime}`); return;
-    }
+  function doAdd() {
     addCourse({
       courseName: resolvedCourseName,
       teamName: form.teamName,
@@ -79,6 +69,22 @@ export function AddCourseModal({ initialDate, initialValues, onAfterAdd, onClose
     });
     onAfterAdd?.();
     onClose();
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setConflictWarning('');
+    if (!resolvedCourseName || !form.teamName || !form.date || !form.startTime || !form.endTime) {
+      setError('请填写所有字段'); return;
+    }
+    if (form.startTime >= form.endTime) {
+      setError('结束时间必须晚于开始时间'); return;
+    }
+    const conflict = findConflict(courses, session.username, form.date, form.startTime, form.endTime);
+    if (conflict) {
+      setConflictWarning(`你在该时段已有课程「${conflict.teamName}」${conflict.startTime}–${conflict.endTime}`); return;
+    }
+    doAdd();
   }
 
   const inputCls = 'border border-[#e2e8f0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#1e3a5f]/40 focus:border-[#1e3a5f] text-sm w-full';
@@ -177,10 +183,26 @@ export function AddCourseModal({ initialDate, initialValues, onAfterAdd, onClose
         )}
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="secondary" onClick={onClose}>取消</Button>
-          <Button type="submit">{initialValues ? '提交新课程' : '添加'}</Button>
-        </div>
+        {conflictWarning ? (
+          <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 flex flex-col gap-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">时间冲突提醒</p>
+                <p className="text-xs text-amber-700 mt-0.5">{conflictWarning}</p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="secondary" onClick={() => setConflictWarning('')}>重新选择时间</Button>
+              <Button type="button" onClick={doAdd}>仍然添加</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="secondary" onClick={onClose}>取消</Button>
+            <Button type="submit">{initialValues ? '提交新课程' : '添加'}</Button>
+          </div>
+        )}
       </form>
     </Modal>
   );

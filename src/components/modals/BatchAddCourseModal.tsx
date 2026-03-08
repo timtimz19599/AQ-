@@ -3,7 +3,7 @@ import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
 import { useCourseStore } from '@/store/courseStore';
 import { useAuthStore } from '@/store/authStore';
-import { Wifi, MapPin, X, Plus, Trash2 } from 'lucide-react';
+import { Wifi, MapPin, X, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import type { CourseMode } from '@/types/course';
 import { COURSE_NAME_OPTIONS, findConflict } from '@/utils/courseUtils';
 import { localDateStr } from '@/utils/timeUtils';
@@ -43,6 +43,7 @@ export function BatchAddCourseModal({ onClose }: BatchAddCourseModalProps) {
     { id: uuidv4(), date: today, startTime: '09:00', endTime: '10:00', mode: 'offline' },
   ]);
   const [error, setError] = useState('');
+  const [conflictWarning, setConflictWarning] = useState('');
 
   const isCustom = courseNameSelect === '其他';
   const resolvedCourseName = isCustom ? courseNameCustom.trim() : courseNameSelect;
@@ -76,33 +77,7 @@ export function BatchAddCourseModal({ onClose }: BatchAddCourseModalProps) {
     setCoTeachers(prev => prev.filter(u => u !== username));
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!resolvedCourseName) { setError('请填写课程名称'); return; }
-    if (!teamName.trim()) { setError('请填写队伍名称'); return; }
-    if (sessions.length === 0) { setError('请至少添加一个课次'); return; }
-    for (const s of sessions) {
-      if (!s.date || !s.startTime || !s.endTime) { setError('请填写所有课次的日期和时间'); return; }
-      if (s.startTime >= s.endTime) { setError('结束时间必须晚于开始时间'); return; }
-    }
-
-    const targetTeacher = isAdmin ? teacher : session.username;
-    for (let i = 0; i < sessions.length; i++) {
-      const s = sessions[i];
-      // 与已有课程冲突
-      const conflict = findConflict(courses, targetTeacher, s.date, s.startTime, s.endTime);
-      if (conflict) {
-        setError(`第 ${i + 1} 节时间冲突：该老师在此时段已有课程「${conflict.teamName}」${conflict.startTime}–${conflict.endTime}`); return;
-      }
-      // 批次内课次互相冲突
-      for (let j = 0; j < i; j++) {
-        const other = sessions[j];
-        if (other.date === s.date && other.startTime < s.endTime && s.startTime < other.endTime) {
-          setError(`第 ${j + 1} 节与第 ${i + 1} 节时间重叠，请检查`); return;
-        }
-      }
-    }
-
+  function doAddAll() {
     for (const s of sessions) {
       addCourse({
         courseName: resolvedCourseName,
@@ -117,6 +92,38 @@ export function BatchAddCourseModal({ onClose }: BatchAddCourseModalProps) {
       });
     }
     onClose();
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setConflictWarning('');
+    if (!resolvedCourseName) { setError('请填写课程名称'); return; }
+    if (!teamName.trim()) { setError('请填写队伍名称'); return; }
+    if (sessions.length === 0) { setError('请至少添加一个课次'); return; }
+    for (const s of sessions) {
+      if (!s.date || !s.startTime || !s.endTime) { setError('请填写所有课次的日期和时间'); return; }
+      if (s.startTime >= s.endTime) { setError('结束时间必须晚于开始时间'); return; }
+    }
+
+    const targetTeacher = isAdmin ? teacher : session.username;
+    for (let i = 0; i < sessions.length; i++) {
+      const s = sessions[i];
+      // 批次内课次互相冲突（硬性错误，不允许绕过）
+      for (let j = 0; j < i; j++) {
+        const other = sessions[j];
+        if (other.date === s.date && other.startTime < s.endTime && s.startTime < other.endTime) {
+          setError(`第 ${j + 1} 节与第 ${i + 1} 节时间重叠，请检查`); return;
+        }
+      }
+      // 与已有课程冲突（可二次确认绕过）
+      const conflict = findConflict(courses, targetTeacher, s.date, s.startTime, s.endTime);
+      if (conflict) {
+        setConflictWarning(`第 ${i + 1} 节：该老师在此时段已有课程「${conflict.teamName}」${conflict.startTime}–${conflict.endTime}`);
+        return;
+      }
+    }
+
+    doAddAll();
   }
 
   const inputCls = 'border border-[#e2e8f0] rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#1e3a5f]/40 focus:border-[#1e3a5f] text-sm w-full bg-white';
@@ -279,11 +286,26 @@ export function BatchAddCourseModal({ onClose }: BatchAddCourseModalProps) {
         </div>
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
-
-        <div className="flex justify-end gap-2 pt-1">
-          <Button type="button" variant="secondary" onClick={onClose}>取消</Button>
-          <Button type="submit">批量添加 {sessions.length} 节课</Button>
-        </div>
+        {conflictWarning ? (
+          <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 flex flex-col gap-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">时间冲突提醒</p>
+                <p className="text-xs text-amber-700 mt-0.5">{conflictWarning}</p>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="secondary" onClick={() => setConflictWarning('')}>重新选择时间</Button>
+              <Button type="button" onClick={doAddAll}>仍然全部添加</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="secondary" onClick={onClose}>取消</Button>
+            <Button type="submit">批量添加 {sessions.length} 节课</Button>
+          </div>
+        )}
       </form>
     </Modal>
   );
