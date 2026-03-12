@@ -558,7 +558,7 @@ export function SchedulePage() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 p-2 md:p-3 overflow-y-auto dot-grid">
+      <main className="flex-1 p-2 md:p-3 overflow-y-auto dot-grid flex flex-col">
         <div className="bg-[#f8fafc]/80 rounded-xl p-2">
           <MonthNavigator
             year={year} month={month}
@@ -586,6 +586,26 @@ export function SchedulePage() {
             />
           )}
         </div>
+
+        {/* Week navigation bar — sticky at the bottom for easy thumb reach */}
+        {viewMode === 'week' && (
+          <div className="sticky bottom-0 mt-3 flex items-center justify-between bg-white border-t border-[#e2e8f0] px-6 py-3 rounded-xl shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+            <button
+              onClick={prevWeek}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1e3a5f] text-white text-sm font-semibold hover:bg-[#162d4a] active:opacity-80 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              上一周
+            </button>
+            <button
+              onClick={nextWeek}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1e3a5f] text-white text-sm font-semibold hover:bg-[#162d4a] active:opacity-80 transition-colors"
+            >
+              下一周
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </main>
 
       {showAddModal && session?.role === 'admin' && (
@@ -621,6 +641,7 @@ export function SchedulePage() {
       {selectedDate && (
         <DayDetailModal
           date={selectedDate}
+          filterUsername={filterUsername}
           onCourseClick={setSelectedCourseId}
           onClose={() => setSelectedDate(null)}
         />

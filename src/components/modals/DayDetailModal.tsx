@@ -19,9 +19,10 @@ interface DayDetailModalProps {
   date: string;
   onCourseClick: (courseId: string) => void;
   onClose: () => void;
+  filterUsername?: string;
 }
 
-export function DayDetailModal({ date, onCourseClick, onClose }: DayDetailModalProps) {
+export function DayDetailModal({ date, onCourseClick, onClose, filterUsername }: DayDetailModalProps) {
   const courses = useCourseStore(s => s.courses);
   const getTeacherColor = useSettingsStore(s => s.getTeacherColor);
   const getAllUsers = useAuthStore(s => s.getAllUsers);
@@ -33,18 +34,21 @@ export function DayDetailModal({ date, onCourseClick, onClose }: DayDetailModalP
 
   const todayStr = localDateStr();
   const dayCourses = courses
-    .filter(c => c.date === date)
+    .filter(c =>
+      c.date === date &&
+      (!filterUsername || c.teacher === filterUsername || c.coTeachers?.includes(filterUsername))
+    )
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
   const deadlines = allDeadlines.filter(dl => dl.date === date);
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
       onClick={onClose}
     >
       <div
-        className="bg-white w-full md:w-[480px] max-h-[85vh] rounded-t-2xl md:rounded-2xl flex flex-col overflow-hidden shadow-2xl"
+        className="bg-white w-full max-w-[480px] max-h-[85vh] rounded-2xl flex flex-col overflow-hidden shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
