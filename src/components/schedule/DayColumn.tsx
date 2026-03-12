@@ -1,5 +1,5 @@
 import type { DaySchedule, Course } from '@/types/course';
-import { parseDateParts, parseMinutes, localDateStr } from '@/utils/timeUtils';
+import { parseDateParts, parseMinutes } from '@/utils/timeUtils';
 import { Sun, Sunset, Moon, Trophy } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { CompactCourseCard } from './CompactCourseCard';
