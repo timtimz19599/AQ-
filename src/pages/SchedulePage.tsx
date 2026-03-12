@@ -16,6 +16,7 @@ import { ExportScheduleModal } from '@/components/modals/ExportScheduleModal';
 import { ImportCoursesModal } from '@/components/modals/ImportCoursesModal';
 import { FeedbackHistoryModal } from '@/components/modals/FeedbackHistoryModal';
 import { MemoModal } from '@/components/modals/MemoModal';
+import { DayDetailModal } from '@/components/modals/DayDetailModal';
 import { calcDurationMinutes, localDateStr } from '@/utils/timeUtils';
 import { Clock, CalendarDays, TrendingUp, TrendingDown, Minus, Bell, Pencil, LogOut, AlertCircle, Users, Trophy, Menu, X } from 'lucide-react';
 import { useDeadlineStore } from '@/store/deadlineStore';
@@ -39,6 +40,7 @@ export function SchedulePage() {
   const [showMemoModal, setShowMemoModal] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -556,8 +558,8 @@ export function SchedulePage() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 p-3 md:p-6 overflow-y-auto dot-grid">
-        <div className="bg-[#f8fafc]/80 rounded-xl p-4">
+      <main className="flex-1 p-2 md:p-3 overflow-y-auto dot-grid">
+        <div className="bg-[#f8fafc]/80 rounded-xl p-2">
           <MonthNavigator
             year={year} month={month}
             onPrev={viewMode === 'month' ? prevMonth : prevWeek}
@@ -571,9 +573,17 @@ export function SchedulePage() {
             weekStart={weekStart}
           />
           {viewMode === 'month' ? (
-            <MonthGrid weeks={weeks} onCourseClick={setSelectedCourseId} />
+            <MonthGrid
+              weeks={weeks}
+              onCourseClick={setSelectedCourseId}
+              onDayClick={setSelectedDate}
+            />
           ) : (
-            <WeekGrid days={weekDays} onCourseClick={setSelectedCourseId} />
+            <WeekGrid
+              days={weekDays}
+              onCourseClick={setSelectedCourseId}
+              onDayClick={setSelectedDate}
+            />
           )}
         </div>
       </main>
@@ -606,6 +616,13 @@ export function SchedulePage() {
         <CourseDetailModal
           courseId={selectedCourseId}
           onClose={() => setSelectedCourseId(null)}
+        />
+      )}
+      {selectedDate && (
+        <DayDetailModal
+          date={selectedDate}
+          onCourseClick={setSelectedCourseId}
+          onClose={() => setSelectedDate(null)}
         />
       )}
       {showProfile && (

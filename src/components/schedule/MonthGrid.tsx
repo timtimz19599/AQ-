@@ -8,6 +8,7 @@ const TODAY = localDateStr();
 interface MonthGridProps {
   weeks: (DaySchedule | null)[][];
   onCourseClick: (courseId: string) => void;
+  onDayClick: (date: string) => void;
 }
 
 function EmptyMonthState() {
@@ -29,7 +30,7 @@ function EmptyMonthState() {
   );
 }
 
-export function MonthGrid({ weeks, onCourseClick }: MonthGridProps) {
+export function MonthGrid({ weeks, onCourseClick, onDayClick }: MonthGridProps) {
   const isEmpty = weeks.every(week => week.every(day => day === null || day.groups.length === 0));
 
   return (
@@ -52,6 +53,7 @@ export function MonthGrid({ weeks, onCourseClick }: MonthGridProps) {
                 schedule={day}
                 isToday={day.date === TODAY}
                 onCourseClick={onCourseClick}
+                onDayClick={onDayClick}
               />
             )
           )}

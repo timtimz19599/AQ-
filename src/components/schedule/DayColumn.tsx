@@ -25,9 +25,12 @@ interface DayColumnProps {
   schedule: DaySchedule;
   isToday: boolean;
   onCourseClick: (courseId: string) => void;
+  onDayClick: (date: string) => void;
 }
 
-export function DayColumn({ schedule, isToday, onCourseClick }: DayColumnProps) {
+const MAX_CHIPS = 3;
+
+export function DayColumn({ schedule, isToday, onCourseClick, onDayClick }: DayColumnProps) {
   const { day } = parseDateParts(schedule.date);
   const allDeadlines = useDeadlineStore(s => s.deadlines);
   const getTeacherColor = useSettingsStore(s => s.getTeacherColor);
@@ -41,28 +44,31 @@ export function DayColumn({ schedule, isToday, onCourseClick }: DayColumnProps) 
       byPeriod[getCoursePeriod(slot.course)].push(slot.course);
     }
   }
-  // Sort each period's courses by start time
   for (const p of PERIODS) {
     byPeriod[p.key].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
   const activePeriods = PERIODS.filter(p => byPeriod[p.key].length > 0);
   const allCourses = PERIODS.flatMap(p => byPeriod[p.key]);
+  const overflowCount = allCourses.length - MAX_CHIPS;
 
   return (
     <div className={`border rounded-lg flex flex-col overflow-hidden ${
       hasDeadline ? 'border-red-400 ring-1 ring-red-300' :
       isToday ? 'border-[#1e3a5f] bg-blue-50/40' : 'border-[#e2e8f0] bg-white'
     } ${hasDeadline ? 'bg-red-50/40' : ''}`}>
-      {/* Day number */}
-      <div className="text-center py-1 shrink-0">
+      {/* Day number — clicking opens DayDetailModal */}
+      <button
+        className="text-center py-1 shrink-0 w-full hover:opacity-70 transition-opacity"
+        onClick={() => onDayClick(schedule.date)}
+      >
         <span className={isToday
           ? 'bg-[#1e3a5f] text-white rounded-full w-6 h-6 inline-flex items-center justify-center text-xs font-bold'
           : 'text-[#64748b] text-sm font-semibold'
         }>
           {day}
         </span>
-      </div>
+      </button>
 
       {/* Deadline badge */}
       {hasDeadline && (
@@ -76,19 +82,26 @@ export function DayColumn({ schedule, isToday, onCourseClick }: DayColumnProps) 
         </div>
       )}
 
-      {/* Mobile: colored dots per course */}
-      <div className="md:hidden flex flex-wrap gap-0.5 p-1 min-h-[40px] items-start content-start">
-        {allCourses.map(course => (
-          <span
+      {/* Mobile: colored event chips — tap any area to see all courses for the day */}
+      <div
+        className="md:hidden flex flex-col gap-0.5 p-1 min-h-[36px] cursor-pointer"
+        onClick={() => onDayClick(schedule.date)}
+      >
+        {allCourses.slice(0, MAX_CHIPS).map(course => (
+          <div
             key={course.id}
-            className="w-2.5 h-2.5 rounded-full cursor-pointer flex-shrink-0 hover:opacity-75 active:opacity-60"
+            className="rounded-sm px-1 py-0.5 text-white leading-tight"
             style={{ backgroundColor: getTeacherColor(course.teacher) }}
-            onClick={(e) => { e.stopPropagation(); onCourseClick(course.id); }}
-          />
+          >
+            <span className="text-[9px] font-medium truncate block">{course.teamName}</span>
+          </div>
         ))}
+        {overflowCount > 0 && (
+          <div className="text-[9px] text-[#64748b] px-1 font-medium">+{overflowCount} 节</div>
+        )}
       </div>
 
-      {/* Desktop: full period sections */}
+      {/* Desktop: full period sections with course cards */}
       <div className="hidden md:flex flex-col min-h-[60px]">
         {activePeriods.map((p, i) => {
           const { Icon } = p;
@@ -109,7 +122,7 @@ export function DayColumn({ schedule, isToday, onCourseClick }: DayColumnProps) 
                 <span className="text-[9px] text-[#94a3b8] ml-auto">{byPeriod[p.key].length}节</span>
               </div>
 
-              {/* Courses – stacked vertically, one per row */}
+              {/* Courses */}
               <div className="flex flex-col gap-0.5 p-0.5">
                 {byPeriod[p.key].map(course => (
                   <CompactCourseCard

@@ -33,12 +33,21 @@ export function findConflict(
   );
 }
 
-/** Returns the 1-based Day number for a course, sorted globally by date then startTime. */
+/**
+ * Returns the 1-based Day number for a course within its own series.
+ * A "series" is all courses sharing the same courseName + teamName,
+ * sorted by date then startTime.
+ * e.g. every Monday's "财商课后课ASA" for "Basis" → Day 1, Day 2, Day 3…
+ */
 export function getDayNumber(courseId: string, courses: Course[]): number {
-  const sorted = [...courses].sort((a, b) => {
-    const d = a.date.localeCompare(b.date);
-    return d !== 0 ? d : a.startTime.localeCompare(b.startTime);
-  });
-  const idx = sorted.findIndex(c => c.id === courseId);
+  const course = courses.find(c => c.id === courseId);
+  if (!course) return 0;
+  const sameSeries = courses
+    .filter(c => c.courseName === course.courseName && c.teamName === course.teamName)
+    .sort((a, b) => {
+      const d = a.date.localeCompare(b.date);
+      return d !== 0 ? d : a.startTime.localeCompare(b.startTime);
+    });
+  const idx = sameSeries.findIndex(c => c.id === courseId);
   return idx === -1 ? 0 : idx + 1;
 }

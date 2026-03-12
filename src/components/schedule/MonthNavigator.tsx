@@ -43,13 +43,14 @@ export function MonthNavigator({
   const isAdmin = session?.role === 'admin';
 
   return (
-    <div className="flex items-center justify-between mb-4 px-1 flex-wrap gap-2">
-      {/* Date navigation */}
+    <div className="flex flex-col items-center gap-2 mb-4">
+
+      {/* Row 1: date navigation — always centered */}
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={onPrev}>
           <ChevronLeft className="w-4 h-4" />
         </Button>
-        <h2 className="text-xl font-bold text-[#1e3a5f] min-w-[160px] text-center">
+        <h2 className="text-xl font-bold text-[#1e3a5f] min-w-[180px] text-center">
           {viewMode === 'month' ? (
             <><span className="text-[#f59e0b]">{year}</span>年 {MONTH_NAMES[month - 1]}</>
           ) : (
@@ -61,8 +62,8 @@ export function MonthNavigator({
         </Button>
       </div>
 
-      {/* Right controls */}
-      <div className="flex items-center gap-2 flex-wrap">
+      {/* Row 2: action buttons — centered */}
+      <div className="flex items-center gap-2 flex-wrap justify-center">
         {/* View toggle */}
         <div className="flex rounded-lg border border-[#e2e8f0] overflow-hidden text-sm">
           <button
@@ -85,20 +86,20 @@ export function MonthNavigator({
 
         {/* Export */}
         <Button variant="secondary" size="sm" onClick={onExport} title="导出课表为 PDF">
-          <Download className="w-4 h-4 md:mr-1" /><span className="hidden md:inline">导出</span>
+          <Download className="w-4 h-4 mr-1" /><span>导出</span>
         </Button>
 
         {/* Import – admin only */}
         {isAdmin && (
           <Button variant="secondary" size="sm" onClick={onImport} title="导入课程">
-            <Upload className="w-4 h-4 md:mr-1" /><span className="hidden md:inline">导入</span>
+            <Upload className="w-4 h-4 mr-1" /><span>导入</span>
           </Button>
         )}
 
         {/* Batch add */}
         {canEdit && (
           <Button variant="secondary" size="sm" onClick={onBatchAdd} title="批量添加多节课">
-            <Layers className="w-4 h-4 md:mr-1" /><span className="hidden md:inline">一键排课</span>
+            <Layers className="w-4 h-4 mr-1" /><span>一键排课</span>
           </Button>
         )}
 
@@ -109,6 +110,7 @@ export function MonthNavigator({
           </span>
         )}
       </div>
+
     </div>
   );
 }
