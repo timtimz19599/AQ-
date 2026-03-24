@@ -18,7 +18,7 @@ import { FeedbackHistoryModal } from '@/components/modals/FeedbackHistoryModal';
 import { MemoModal } from '@/components/modals/MemoModal';
 import { DayDetailModal } from '@/components/modals/DayDetailModal';
 import { calcDurationMinutes, localDateStr } from '@/utils/timeUtils';
-import { Clock, CalendarDays, TrendingUp, TrendingDown, Minus, Bell, Pencil, LogOut, AlertCircle, Users, Trophy, Menu, X } from 'lucide-react';
+import { Clock, CalendarDays, TrendingUp, TrendingDown, Minus, Bell, Pencil, LogOut, AlertCircle, Users, Trophy, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDeadlineStore } from '@/store/deadlineStore';
 import { ProfileModal } from '@/components/modals/ProfileModal';
 
