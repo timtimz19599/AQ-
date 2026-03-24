@@ -29,8 +29,10 @@ function DeltaBadge({ delta }: { delta: number }) {
 
 export function StatisticsTab() {
   const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
+  const [viewMode, setViewMode] = useState<'confirmed' | 'unconfirmed'>('confirmed');
 
   const allCourses = useCourseStore(s => s.courses);
   const getAllUsers = useAuthStore(s => s.getAllUsers);
@@ -45,8 +47,16 @@ export function StatisticsTab() {
   const thisPrefix = `${year}-${String(month).padStart(2, '0')}`;
   const lastPrefix = `${lastYear}-${String(lastMonth).padStart(2, '0')}`;
 
-  const thisCourses = useMemo(() => allCourses.filter(c => c.date.startsWith(thisPrefix) && c.status === 'completed'), [allCourses, thisPrefix]);
-  const lastCourses = useMemo(() => allCourses.filter(c => c.date.startsWith(lastPrefix) && c.status === 'completed'), [allCourses, lastPrefix]);
+  // 已确认：status === 'completed'
+  const thisConfirmedCourses = useMemo(() => allCourses.filter(c => c.date.startsWith(thisPrefix) && c.status === 'completed'), [allCourses, thisPrefix]);
+  const lastConfirmedCourses = useMemo(() => allCourses.filter(c => c.date.startsWith(lastPrefix) && c.status === 'completed'), [allCourses, lastPrefix]);
+
+  // 未确认：已过去但既未完成也未取消
+  const thisUnconfirmedCourses = useMemo(() => allCourses.filter(c => c.date.startsWith(thisPrefix) && c.date < todayStr && c.status !== 'completed' && c.status !== 'cancelled'), [allCourses, thisPrefix, todayStr]);
+  const lastUnconfirmedCourses = useMemo(() => allCourses.filter(c => c.date.startsWith(lastPrefix) && c.date < todayStr && c.status !== 'completed' && c.status !== 'cancelled'), [allCourses, lastPrefix, todayStr]);
+
+  const thisCourses = viewMode === 'confirmed' ? thisConfirmedCourses : thisUnconfirmedCourses;
+  const lastCourses = viewMode === 'confirmed' ? lastConfirmedCourses : lastUnconfirmedCourses;
 
   // Only count approved teachers
   const approvedUsernames = useMemo(() => {
@@ -113,11 +123,48 @@ export function StatisticsTab() {
       ((allTimeMins.get(r.username) ?? 0) / 60).toFixed(1),
       totalMins > 0 ? (r.totalMins / totalMins * 100).toFixed(1) : '0.0',
     ]);
-    downloadCSV(`课时统计_${year}-${String(month).padStart(2, '0')}.csv`, [header, ...rows]);
+    downloadCSV(`课时统计_${viewMode === 'confirmed' ? '已确认' : '未确认'}_${year}-${String(month).padStart(2, '0')}.csv`, [header, ...rows]);
   }
 
   return (
     <div className="flex flex-col gap-6">
+      {/* View mode toggle */}
+      <div className="flex items-center gap-1 bg-[#f1f5f9] rounded-xl p-1 self-start">
+        <button
+          onClick={() => setViewMode('confirmed')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+            viewMode === 'confirmed'
+              ? 'bg-white text-[#1e3a5f] shadow-sm'
+              : 'text-[#64748b] hover:text-[#1e3a5f]'
+          }`}
+        >
+          <span className={`w-2 h-2 rounded-full ${viewMode === 'confirmed' ? 'bg-emerald-500' : 'bg-[#cbd5e1]'}`} />
+          已确认课时
+          <span className={`text-xs px-1.5 py-0.5 rounded-full font-normal ${viewMode === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : 'bg-[#e2e8f0] text-[#94a3b8]'}`}>
+            {(thisConfirmedCourses.length)}节
+          </span>
+        </button>
+        <button
+          onClick={() => setViewMode('unconfirmed')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+            viewMode === 'unconfirmed'
+              ? 'bg-white text-amber-700 shadow-sm'
+              : 'text-[#64748b] hover:text-amber-700'
+          }`}
+        >
+          <span className={`w-2 h-2 rounded-full ${viewMode === 'unconfirmed' ? 'bg-amber-400' : 'bg-[#cbd5e1]'}`} />
+          未确认课时
+          {thisUnconfirmedCourses.length > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded-full font-normal ${viewMode === 'unconfirmed' ? 'bg-amber-100 text-amber-700' : 'bg-amber-100 text-amber-600'}`}>
+              {thisUnconfirmedCourses.length}节
+            </span>
+          )}
+          {thisUnconfirmedCourses.length === 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded-full font-normal bg-[#e2e8f0] text-[#94a3b8]">0节</span>
+          )}
+        </button>
+      </div>
+
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2">
@@ -141,7 +188,7 @@ export function StatisticsTab() {
       {/* Company summary cards */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: '本月合计课时', icon: <Clock className="w-4 h-4" />, mins: thisStats.totalMins, delta: totalDelta, accent: '#1e3a5f' },
+          { label: viewMode === 'confirmed' ? '本月已确认课时' : '本月未确认课时', icon: <Clock className="w-4 h-4" />, mins: thisStats.totalMins, delta: totalDelta, accent: viewMode === 'confirmed' ? '#1e3a5f' : '#d97706' },
           { label: '线上课时', icon: <Wifi className="w-4 h-4" />, mins: thisStats.totalOnline, delta: onlineDelta, accent: '#0ea5e9' },
           { label: '线下课时', icon: <MapPin className="w-4 h-4" />, mins: thisStats.totalOffline, delta: offlineDelta, accent: '#10b981' },
         ].map(card => (
@@ -169,13 +216,13 @@ export function StatisticsTab() {
             <rect x="16" y="6" width="4" height="12" rx="2" fill="#94a3b8" />
             <rect x="36" y="6" width="4" height="12" rx="2" fill="#94a3b8" />
           </svg>
-          <p className="mt-3 text-[#64748b] text-sm">本月暂无课程数据</p>
+          <p className="mt-3 text-[#64748b] text-sm">{viewMode === 'confirmed' ? '本月暂无已确认课程' : '本月暂无未确认课程'}</p>
         </div>
       ) : (
         <>
           {/* Donut comparison */}
           <div className="bg-white rounded-xl border border-[#e2e8f0] p-6">
-            <h3 className="text-sm font-semibold text-[#1e3a5f] mb-4">教师课时占比 · 本月 vs 上月</h3>
+            <h3 className="text-sm font-semibold text-[#1e3a5f] mb-4">{viewMode === 'confirmed' ? '已确认' : '未确认'}教师课时占比 · 本月 vs 上月</h3>
             <div className="flex items-center justify-center gap-6 flex-wrap">
               {/* This month */}
               <div className="flex flex-col items-center gap-1">
